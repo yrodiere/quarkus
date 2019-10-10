@@ -15,7 +15,9 @@ import javax.validation.Validator;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.Email;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -27,10 +29,12 @@ import org.hibernate.validator.constraints.Length;
 import io.quarkus.it.hibernate.validator.custom.MyOtherBean;
 import io.quarkus.it.hibernate.validator.injection.InjectedConstraintValidatorConstraint;
 import io.quarkus.it.hibernate.validator.injection.MyService;
+import io.quarkus.it.hibernate.validator.post.JsonSerializableBean;
 
 @Path("/hibernate-validator/test")
 public class HibernateValidatorTestResource
-        implements HibernateValidatorTestResourceGenericInterface<Integer> {
+        implements HibernateValidatorTestResourceGenericInterface<Integer>,
+        HibernateValidatorTestResourcePostGenericInterface<JsonSerializableBean> {
 
     @Inject
     Validator validator;
@@ -103,6 +107,15 @@ public class HibernateValidatorTestResource
     @Produces(MediaType.TEXT_PLAIN)
     public String testRestEndPointValidation(@Digits(integer = 5, fraction = 0) @PathParam("id") String id) {
         return id;
+    }
+
+    @Override
+    @POST
+    @Path("/rest-post-end-point-generic-method-validation/")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
+    public String testRestPostEndPointGenericMethodValidation(@Valid JsonSerializableBean bean) {
+        return bean.id;
     }
 
     @GET
@@ -247,4 +260,5 @@ public class HibernateValidatorTestResource
         @SuppressWarnings("unused")
         private String property;
     }
+
 }

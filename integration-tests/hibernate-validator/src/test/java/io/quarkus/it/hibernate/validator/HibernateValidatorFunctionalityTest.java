@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 
 /**
  * Test various Bean Validation operations running in Quarkus
@@ -65,6 +66,24 @@ public class HibernateValidatorFunctionalityTest {
 
         RestAssured.when()
                 .get("/hibernate-validator/test/rest-end-point-validation/42/")
+                .then()
+                .body(is("42"));
+    }
+
+    @Test
+    public void testRestPostEndPointGenericMethodValidation() {
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("{}")
+                .post("/hibernate-validator/test/rest-post-end-point-generic-method-validation/")
+                .then()
+                .statusCode(400)
+                .body(containsString("must not be null"));
+
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("\"id\":\"42\"")
+                .post("/hibernate-validator/test/rest-post-end-point-generic-method-validation/")
                 .then()
                 .body(is("42"));
     }
