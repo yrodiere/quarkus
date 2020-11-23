@@ -43,6 +43,7 @@ import io.quarkus.hibernate.orm.runtime.service.CfgXmlAccessServiceInitiatorQuar
 import io.quarkus.hibernate.orm.runtime.service.DisabledJMXInitiator;
 import io.quarkus.hibernate.orm.runtime.service.FlatClassLoaderService;
 import io.quarkus.hibernate.orm.runtime.service.QuarkusRegionFactoryInitiator;
+import io.quarkus.hibernate.orm.runtime.service.QuarkusStaticDialectFactoryInitiator;
 import io.quarkus.hibernate.reactive.runtime.customized.QuarkusNoJdbcEnvironmentInitiator;
 
 /**
@@ -165,6 +166,8 @@ public class PreconfiguredReactiveServiceRegistryBuilder {
         serviceInitiators.add(SchemaManagementToolInitiator.INSTANCE);
 
         // Replaces JdbcEnvironmentInitiator.INSTANCE :
+        // TODO when/if JDBC is available, we can replace this with JdbcEnvironmentInitiator.INSTANCE
+        //   to get Hibernate ORM to automatically infer some database capabilities by asking the JDBC driver.
         serviceInitiators.add(new QuarkusNoJdbcEnvironmentInitiator(rs.getDialect()));
 
         // Custom one!
@@ -185,8 +188,8 @@ public class PreconfiguredReactiveServiceRegistryBuilder {
         // Disabled: Dialect is injected explicitly
         // serviceInitiators.add( DialectResolverInitiator.INSTANCE );
 
-        // Disabled: Dialect is injected explicitly
-        // serviceInitiators.add( DialectFactoryInitiator.INSTANCE );
+        // Custom one: Dialect is injected explicitly
+        serviceInitiators.add(new QuarkusStaticDialectFactoryInitiator(rs.getDialect()));
 
         serviceInitiators.add(BatchBuilderInitiator.INSTANCE);
         serviceInitiators.add(JdbcServicesInitiator.INSTANCE);

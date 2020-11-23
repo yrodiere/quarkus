@@ -138,6 +138,9 @@ public final class FastBootHibernateReactivePersistenceProvider implements Persi
 
             HibernateOrmIntegrations.contributeRuntimeProperties((k, v) -> runtimeSettingsBuilder.put(k, v));
 
+            // Allow detection of driver/database capabilities on runtime init (was disabled during static init)
+            runtimeSettingsBuilder.put("hibernate.temp.use_jdbc_metadata_defaults", "true");
+
             RuntimeSettings runtimeSettings = runtimeSettingsBuilder.build();
 
             StandardServiceRegistry standardServiceRegistry = rewireMetadataAndExtractServiceRegistry(
