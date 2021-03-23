@@ -7,6 +7,11 @@ import org.hibernate.boot.jaxb.spi.XmlMappingOptions;
  */
 public class QuarkusXmlMappingOptions implements XmlMappingOptions {
 
-    // TODO #14762 request the correct options that will make XML mapping work in Quarkus.
+    @Override
+    public boolean isPreferJaxb() {
+        // We cannot (easily) serialize the DOM4J Documents that are normally used to represent orm.xml mappings.
+        // Let's use JAXB instead: it represents mappings as POJOs that can easily be serialized by BytecodeRecorder.
+        return true;
+    }
 
 }

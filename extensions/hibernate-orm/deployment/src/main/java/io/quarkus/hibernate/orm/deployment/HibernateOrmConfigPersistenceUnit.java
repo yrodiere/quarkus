@@ -113,6 +113,21 @@ public class HibernateOrmConfigPersistenceUnit {
     public Optional<String> implicitNamingStrategy;
 
     /**
+     * XML files to configure the entity mapping, e.g. {@code META-INF/my-orm.xml}.
+     * <p>
+     * The HBM format ({@code hbm.xml}) is deprecated.
+     * JPA's {@code orm.xml} format should be favored where possible.
+     * <p>
+     * Note that unlike JPA's {@code persistence.xml},
+     * Quarkus-configured persistence units do not add any implicit mapping files
+     * such as {@code META-INF/orm.xml}.
+     * So this property has no default, and must be set to a list of mapping files
+     * in order to enable XML mapping.
+     */
+    @ConfigItem
+    public Optional<Set<String>> mappingFiles;
+
+    /**
      * Query related configuration.
      */
     @ConfigItem
