@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm;
+package io.quarkus.hibernate.orm.xml.persistence;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
@@ -12,7 +12,7 @@ import io.quarkus.test.QuarkusUnitTest;
 /**
  * @author Emmanuel Bernard emmanuel@hibernate.org
  */
-public class PersistenceAndQuarkusConfigTest {
+public class PersistenceXmlAndQuarkusConfigTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
