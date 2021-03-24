@@ -48,7 +48,7 @@ import io.quarkus.hibernate.orm.deployment.HibernateConfigUtil;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmConfig;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmConfigPersistenceUnit;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmProcessor;
-import io.quarkus.hibernate.orm.deployment.JpaEntitiesBuildItem;
+import io.quarkus.hibernate.orm.deployment.JpaModelBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceProviderSetUpBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceUnitDescriptorBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceXmlDescriptorBuildItem;
@@ -85,8 +85,8 @@ public final class HibernateReactiveProcessor {
     @BuildStep
     void registerBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans, CombinedIndexBuildItem combinedIndex,
             List<PersistenceUnitDescriptorBuildItem> descriptors,
-            JpaEntitiesBuildItem jpaEntities) {
-        if (!hasEntities(jpaEntities)) {
+            JpaModelBuildItem jpaModel) {
+        if (!hasEntities(jpaModel)) {
             return;
         }
 
@@ -106,8 +106,8 @@ public final class HibernateReactiveProcessor {
     @Record(STATIC_INIT)
     public void build(RecorderContext recorderContext,
             HibernateReactiveRecorder recorder,
-            JpaEntitiesBuildItem jpaEntities) {
-        final boolean enableRx = hasEntities(jpaEntities);
+            JpaModelBuildItem jpaModel) {
+        final boolean enableRx = hasEntities(jpaModel);
         recorder.callHibernateReactiveFeatureInit(enableRx);
     }
 
@@ -118,7 +118,7 @@ public final class HibernateReactiveProcessor {
             List<PersistenceXmlDescriptorBuildItem> persistenceXmlDescriptors,
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             LaunchModeBuildItem launchMode,
-            JpaEntitiesBuildItem domainObjects,
+            JpaModelBuildItem jpaModel,
             BuildProducer<SystemPropertyBuildItem> systemProperties,
             BuildProducer<NativeImageResourceBuildItem> nativeImageResources,
             BuildProducer<HotDeploymentWatchedFileBuildItem> hotDeploymentWatchedFiles,
@@ -126,7 +126,7 @@ public final class HibernateReactiveProcessor {
             List<DefaultDataSourceDbKindBuildItem> defaultDataSourceDbKindBuildItems,
             CurateOutcomeBuildItem curateOutcomeBuildItem) {
 
-        final boolean enableHR = hasEntities(domainObjects);
+        final boolean enableHR = hasEntities(jpaModel);
         if (!enableHR) {
             // we have to bail out early as we might not have a Vertx pool configuration
             return;
@@ -153,7 +153,7 @@ public final class HibernateReactiveProcessor {
         if (dbKindOptional.isPresent()) {
             final String dbKind = dbKindOptional.get();
             ParsedPersistenceXmlDescriptor reactivePU = generateReactivePersistenceUnit(
-                    hibernateOrmConfig, domainObjects,
+                    hibernateOrmConfig, jpaModel,
                     dbKind, applicationArchivesBuildItem, launchMode.getLaunchMode(),
                     systemProperties, nativeImageResources, hotDeploymentWatchedFiles);
 
@@ -198,7 +198,7 @@ public final class HibernateReactiveProcessor {
      */
     private static ParsedPersistenceXmlDescriptor generateReactivePersistenceUnit(
             HibernateOrmConfig hibernateOrmConfig,
-            JpaEntitiesBuildItem domainObjects,
+            JpaModelBuildItem jpaModel,
             String dbKind,
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             LaunchMode launchMode,
@@ -221,7 +221,7 @@ public final class HibernateReactiveProcessor {
         desc.setTransactionType(PersistenceUnitTransactionType.RESOURCE_LOCAL);
         desc.getProperties().setProperty(AvailableSettings.DIALECT, dialectClassName);
         desc.setExcludeUnlistedClasses(true);
-        desc.addClasses(new ArrayList<>(domainObjects.getAllModelClassNames()));
+        desc.addClasses(new ArrayList<>(jpaModel.getAllModelClassNames()));
 
         // The storage engine has to be set as a system property.
         if (persistenceUnitConfig.dialect.storageEngine.isPresent()) {
@@ -336,8 +336,8 @@ public final class HibernateReactiveProcessor {
         }
     }
 
-    private boolean hasEntities(JpaEntitiesBuildItem jpaEntities) {
-        return !jpaEntities.getEntityClassNames().isEmpty();
+    private boolean hasEntities(JpaModelBuildItem jpaModel) {
+        return !jpaModel.getEntityClassNames().isEmpty();
     }
 
 }
