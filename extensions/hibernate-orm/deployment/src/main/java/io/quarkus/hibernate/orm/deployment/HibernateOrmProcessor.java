@@ -258,14 +258,13 @@ public final class HibernateOrmProcessor {
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             LaunchModeBuildItem launchMode,
             JpaEntitiesBuildItem jpaEntities,
-            List<NonJpaModelBuildItem> nonJpaModelBuildItems,
             Capabilities capabilities,
             BuildProducer<SystemPropertyBuildItem> systemProperties,
             BuildProducer<NativeImageResourceBuildItem> nativeImageResources,
             BuildProducer<HotDeploymentWatchedFileBuildItem> hotDeploymentWatchedFiles,
             BuildProducer<PersistenceUnitDescriptorBuildItem> persistenceUnitDescriptors) {
 
-        if (!hasEntities(jpaEntities, nonJpaModelBuildItems)) {
+        if (!hasEntities(jpaEntities)) {
             // we can bail out early as there are no entities
             return;
         }
@@ -309,14 +308,9 @@ public final class HibernateOrmProcessor {
             JpaModelIndexBuildItem indexBuildItem,
             BuildProducer<JpaEntitiesBuildItem> domainObjectsProducer,
             List<IgnorableNonIndexedClasses> ignorableNonIndexedClassesBuildItems,
-            List<NonJpaModelBuildItem> nonJpaModelBuildItems,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClass,
             BuildProducer<UnremovableBeanBuildItem> unremovableBean,
             List<PersistenceXmlDescriptorBuildItem> persistenceXmlDescriptors) throws Exception {
-
-        Set<String> nonJpaModelClasses = nonJpaModelBuildItems.stream()
-                .map(NonJpaModelBuildItem::getClassName)
-                .collect(Collectors.toSet());
 
         Set<String> ignorableNonIndexedClasses = Collections.emptySet();
         if (!ignorableNonIndexedClassesBuildItems.isEmpty()) {
@@ -328,7 +322,7 @@ public final class HibernateOrmProcessor {
 
         JpaJandexScavenger scavenger = new JpaJandexScavenger(reflectiveClass, persistenceXmlDescriptors,
                 indexBuildItem.getIndex(),
-                nonJpaModelClasses, ignorableNonIndexedClasses);
+                ignorableNonIndexedClasses);
         final JpaEntitiesBuildItem domainObjects = scavenger.discoverModelAndRegisterForReflection();
         domainObjectsProducer.produce(domainObjects);
     }
@@ -359,7 +353,6 @@ public final class HibernateOrmProcessor {
     public void build(RecorderContext recorderContext, HibernateOrmRecorder recorder,
             Capabilities capabilities,
             JpaEntitiesBuildItem domainObjects,
-            List<NonJpaModelBuildItem> nonJpaModelBuildItems,
             List<PersistenceUnitDescriptorBuildItem> persistenceUnitDescriptorBuildItems,
             List<HibernateOrmIntegrationStaticConfiguredBuildItem> integrationBuildItems,
             ProxyDefinitionsBuildItem proxyDefinitions,
@@ -368,7 +361,7 @@ public final class HibernateOrmProcessor {
 
         feature.produce(new FeatureBuildItem(Feature.HIBERNATE_ORM));
 
-        final boolean enableORM = hasEntities(domainObjects, nonJpaModelBuildItems);
+        final boolean enableORM = hasEntities(domainObjects);
         final boolean hibernateReactivePresent = capabilities.isPresent(Capability.HIBERNATE_REACTIVE);
         //The Hibernate Reactive extension is able to handle registration of PersistenceProviders for both reactive and
         //traditional blocking Hibernate, by depending on this module and delegating to this code.
@@ -419,9 +412,9 @@ public final class HibernateOrmProcessor {
     @BuildStep
     void handleNativeImageImportSql(BuildProducer<NativeImageResourceBuildItem> resources,
             List<PersistenceUnitDescriptorBuildItem> descriptors,
-            JpaEntitiesBuildItem jpaEntities, List<NonJpaModelBuildItem> nonJpaModels,
+            JpaEntitiesBuildItem jpaEntities,
             LaunchModeBuildItem launchMode) {
-        if (!hasEntities(jpaEntities, nonJpaModels)) {
+        if (!hasEntities(jpaEntities)) {
             return;
         }
         for (PersistenceUnitDescriptorBuildItem i : descriptors) {
@@ -440,8 +433,8 @@ public final class HibernateOrmProcessor {
             Capabilities capabilities,
             CombinedIndexBuildItem combinedIndex,
             List<PersistenceUnitDescriptorBuildItem> descriptors,
-            JpaEntitiesBuildItem jpaEntities, List<NonJpaModelBuildItem> nonJpaModels) {
-        if (!hasEntities(jpaEntities, nonJpaModels)) {
+            JpaEntitiesBuildItem jpaEntities) {
+        if (!hasEntities(jpaEntities)) {
             return;
         }
 
@@ -487,8 +480,8 @@ public final class HibernateOrmProcessor {
             BuildProducer<BeanContainerListenerBuildItem> buildProducer,
             BuildProducer<SyntheticBeanBuildItem> syntheticBeans,
             List<PersistenceUnitDescriptorBuildItem> descriptors,
-            JpaEntitiesBuildItem jpaEntities, List<NonJpaModelBuildItem> nonJpaModels) throws Exception {
-        if (!hasEntities(jpaEntities, nonJpaModels)) {
+            JpaEntitiesBuildItem jpaEntities) throws Exception {
+        if (!hasEntities(jpaEntities)) {
             return;
         }
 
@@ -531,10 +524,10 @@ public final class HibernateOrmProcessor {
     @Record(RUNTIME_INIT)
     public ServiceStartBuildItem startPersistenceUnits(HibernateOrmRecorder recorder, BeanContainerBuildItem beanContainer,
             List<JdbcDataSourceBuildItem> dataSourcesConfigured,
-            JpaEntitiesBuildItem jpaEntities, List<NonJpaModelBuildItem> nonJpaModels,
+            JpaEntitiesBuildItem jpaEntities,
             List<JdbcDataSourceSchemaReadyBuildItem> schemaReadyBuildItem,
             List<PersistenceProviderSetUpBuildItem> persistenceProviderSetUp) throws Exception {
-        if (hasEntities(jpaEntities, nonJpaModels)) {
+        if (hasEntities(jpaEntities)) {
             recorder.startAllPersistenceUnits(beanContainer.getValue());
         }
 
@@ -623,8 +616,8 @@ public final class HibernateOrmProcessor {
         }
     }
 
-    private boolean hasEntities(JpaEntitiesBuildItem jpaEntities, List<NonJpaModelBuildItem> nonJpaModels) {
-        return !jpaEntities.getEntityClassNames().isEmpty() || !nonJpaModels.isEmpty();
+    private boolean hasEntities(JpaEntitiesBuildItem jpaEntities) {
+        return !jpaEntities.getEntityClassNames().isEmpty();
     }
 
     private void handleHibernateORMWithNoPersistenceXml(
