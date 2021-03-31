@@ -1,5 +1,6 @@
 package io.quarkus.hibernate.orm.runtime.customized;
 
+import org.hibernate.boot.jaxb.spi.XmlMappingOptions;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl;
@@ -50,6 +51,8 @@ public final class QuarkusStrategySelectorBuilder {
         addMultiTableBulkIdStrategies(strategySelector);
         addImplicitNamingStrategies(strategySelector);
         addCacheKeysFactories(strategySelector);
+        strategySelector.registerStrategyImplementor(XmlMappingOptions.class, XmlMappingOptions.DEFAULT_NAME,
+                QuarkusXmlMappingOptions.class);
 
         // Required to support well known extensions e.g. Envers
         // TODO: should we introduce a new integrator SPI to limit these to extensions supported by Quarkus?
