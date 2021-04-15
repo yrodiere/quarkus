@@ -56,6 +56,14 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-orm</artifactId>
         </dependency>
+        <!-- We exclude the dom4j dependency from Hibernate Core, so we need to restore it here:
+             Envers actually needs dom4j.
+             Hopefully this will change someday: https://hibernate.atlassian.net/browse/HHH-13703
+         -->
+        <dependency>
+            <groupId>org.dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
