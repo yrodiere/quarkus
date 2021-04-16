@@ -20,7 +20,7 @@ public class PersistenceAndQuarkusConfigTest {
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(MyEntity.class)
                     .addAsManifestResource("META-INF/some-persistence.xml", "persistence.xml")
-                    .addAsResource("application.properties"));
+                    .addAsResource("application-templatePU.properties"));
 
     @Test
     public void testPersistenceAndConfigTest() {
