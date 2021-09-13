@@ -10,7 +10,7 @@
 
         <mapping-file>META-INF/my-orm.xml</mapping-file>
 
-        <class>io.quarkus.hibernate.orm.xml.orm.NonAnnotatedEntity</class>
+        <class>io.quarkus.hibernate.orm.mapping.xml.orm.NonAnnotatedEntity</class>
 
         <properties>
             <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>

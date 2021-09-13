@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,7 +20,7 @@ import io.quarkus.test.QuarkusUnitTest;
  * Test that the implicit mapping file META-INF/orm.xml is ignored
  * for persistence units configured through Quarkus' application.properties.
  */
-public class OrmXmlPersistenceXmlNoFileTest {
+public class OrmXmlQuarkusConfigNoFileTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
@@ -28,8 +28,7 @@ public class OrmXmlPersistenceXmlNoFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(AnnotatedEntity.class)
-                    .addAsResource("application-datasource-only.properties", "application.properties")
-                    .addAsManifestResource("META-INF/persistence-mapping-file-no-file.xml", "persistence.xml")
+                    .addAsResource("application-mapping-files-no-file.properties", "application.properties")
                     // For a Quarkus persistence unit,
                     // we will ignore the default META-INF/orm.xml unless it's specified explicitly.
                     // That's to reduce the amount of magic needed,

@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import javax.persistence.Basic;
 import javax.persistence.Entity;

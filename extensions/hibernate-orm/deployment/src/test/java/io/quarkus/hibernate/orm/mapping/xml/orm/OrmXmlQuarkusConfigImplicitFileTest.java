@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -20,21 +20,17 @@ import io.quarkus.test.QuarkusUnitTest;
  * Test that the implicit mapping file META-INF/orm.xml is ignored
  * for persistence units configured through Quarkus' application.properties.
  */
-public class OrmXmlQuarkusConfigNoFileTest {
+public class OrmXmlQuarkusConfigImplicitFileTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
-                    .addClass(AnnotatedEntity.class)
-                    .addAsResource("application-mapping-files-no-file.properties", "application.properties")
-                    // For a Quarkus persistence unit,
-                    // we will ignore the default META-INF/orm.xml unless it's specified explicitly.
-                    // That's to reduce the amount of magic needed,
-                    // and to make sure users can still build an application when they depend on libraries
-                    // that contain undesirable orm.xml files (potentially multiple ones, which would fail).
-                    .addAsManifestResource("META-INF/orm-invalid.xml", "orm.xml"));
+                    .addClass(NonAnnotatedEntity.class)
+                    .addAsResource("application.properties", "application.properties")
+                    // META-INF/orm.xml should be picked up even if it's not mentioned explicitly.
+                    .addAsManifestResource("META-INF/orm-simple.xml", "orm.xml"));
 
     @Inject
     EntityManagerFactory entityManagerFactory;
@@ -44,18 +40,18 @@ public class OrmXmlQuarkusConfigNoFileTest {
 
     @Test
     @Transactional
-    public void ormXmlIgnored() {
-        assertThat(SchemaUtil.getColumnNames(entityManagerFactory, AnnotatedEntity.class))
-                .contains("name")
-                .doesNotContain("someothername");
+    public void ormXmlTakenIntoAccount() {
+        assertThat(SchemaUtil.getColumnNames(entityManagerFactory, NonAnnotatedEntity.class))
+                .contains("thename")
+                .doesNotContain("name");
     }
 
     @Test
     @Transactional
     public void smokeTest() {
         SmokeTestUtils.testSimplePersistRetrieveUpdateDelete(entityManager,
-                AnnotatedEntity.class, AnnotatedEntity::new,
-                AnnotatedEntity::getId, AnnotatedEntity::setName, AnnotatedEntity::getName);
+                NonAnnotatedEntity.class, NonAnnotatedEntity::new,
+                NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
     }
 
 }

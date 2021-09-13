@@ -5,7 +5,7 @@
 
     <description>Override Annotations...</description>
 
-    <entity class="io.quarkus.hibernate.orm.xml.orm.AnnotatedEntity" access="FIELD" metadata-complete="false">
+    <entity class="io.quarkus.hibernate.orm.mapping.xml.orm.AnnotatedEntity" access="FIELD" metadata-complete="false">
         <attributes>
             <basic name="name">
                 <column name="thename" />

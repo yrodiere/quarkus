@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.specialmappings;
+package io.quarkus.hibernate.orm.mapping.abstractsuperentity;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;

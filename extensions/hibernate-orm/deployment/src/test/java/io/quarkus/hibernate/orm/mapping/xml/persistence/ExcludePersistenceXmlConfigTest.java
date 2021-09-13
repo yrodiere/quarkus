@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.persistence;
+package io.quarkus.hibernate.orm.mapping.xml.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

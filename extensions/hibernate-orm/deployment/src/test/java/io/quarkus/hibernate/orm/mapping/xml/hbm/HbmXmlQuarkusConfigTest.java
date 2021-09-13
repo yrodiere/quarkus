@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.hbm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,10 +17,10 @@ import io.quarkus.hibernate.orm.SmokeTestUtils;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
- * Test that the implicit mapping file META-INF/orm.xml is ignored
- * for persistence units configured through Quarkus' application.properties.
+ * Test that assigning an hbm.xml mapping file explicitly works as expected
+ * when configuring the persistence unit through Quarkus' application.properties.
  */
-public class OrmXmlQuarkusConfigImplicitFileTest {
+public class HbmXmlQuarkusConfigTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
@@ -28,9 +28,8 @@ public class OrmXmlQuarkusConfigImplicitFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
-                    .addAsResource("application.properties", "application.properties")
-                    // META-INF/orm.xml should be picked up even if it's not mentioned explicitly.
-                    .addAsManifestResource("META-INF/orm-simple.xml", "orm.xml"));
+                    .addAsResource("application-mapping-files-my-hbm-xml.properties", "application.properties")
+                    .addAsResource("META-INF/hbm-simple.xml", "my-hbm.xml"));
 
     @Inject
     EntityManagerFactory entityManagerFactory;
@@ -53,5 +52,4 @@ public class OrmXmlQuarkusConfigImplicitFileTest {
                 NonAnnotatedEntity.class, NonAnnotatedEntity::new,
                 NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
     }
-
 }

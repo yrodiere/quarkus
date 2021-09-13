@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.hbm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManagerFactory;
@@ -9,8 +9,8 @@ import javax.ws.rs.core.MediaType;
 
 import io.quarkus.hibernate.orm.SchemaUtil;
 
-@Path("/hbm-xml-hot-reload-test")
-public class HbmXmlHotReloadTestResource {
+@Path("/orm-xml-hot-reload-test")
+public class OrmXmlHotReloadTestResource {
     @Inject
     EntityManagerFactory entityManagerFactory;
 

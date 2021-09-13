@@ -10,7 +10,7 @@
 
         <mapping-file>no-file</mapping-file>
 
-        <class>io.quarkus.hibernate.orm.xml.orm.AnnotatedEntity</class>
+        <class>io.quarkus.hibernate.orm.mapping.xml.orm.AnnotatedEntity</class>
 
         <properties>
             <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>

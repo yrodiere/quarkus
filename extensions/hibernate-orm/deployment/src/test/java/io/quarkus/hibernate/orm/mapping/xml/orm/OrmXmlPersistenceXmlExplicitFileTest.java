@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,11 +17,10 @@ import io.quarkus.hibernate.orm.SmokeTestUtils;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
- * Test that the implicit mapping file META-INF/orm.xml is taken into account
- * for persistence units configured through persistence.xml,
- * even if it is not mentioned in the persistence.xml.
+ * Test that assigning an orm.xml mapping file explicitly works as expected
+ * when configuring the persistence unit through persistence.xml.
  */
-public class OrmXmlPersistenceXmlImplicitFileTest {
+public class OrmXmlPersistenceXmlExplicitFileTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
@@ -30,9 +29,8 @@ public class OrmXmlPersistenceXmlImplicitFileTest {
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
                     .addAsResource("application-datasource-only.properties", "application.properties")
-                    .addAsManifestResource("META-INF/persistence-mapping-file-implicit-orm-xml.xml", "persistence.xml")
-                    // META-INF/orm.xml should be picked up even if it's not mentioned explicitly.
-                    .addAsManifestResource("META-INF/orm-simple.xml", "orm.xml"));
+                    .addAsManifestResource("META-INF/persistence-mapping-file-explicit-orm-xml.xml", "persistence.xml")
+                    .addAsManifestResource("META-INF/orm-simple.xml", "my-orm.xml"));
 
     @Inject
     EntityManagerFactory entityManagerFactory;

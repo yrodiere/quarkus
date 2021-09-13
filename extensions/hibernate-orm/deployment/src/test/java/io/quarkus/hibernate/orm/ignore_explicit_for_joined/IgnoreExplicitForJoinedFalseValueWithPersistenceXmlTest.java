@@ -13,7 +13,7 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import io.quarkus.hibernate.orm.xml.persistence.MyEntity;
+import io.quarkus.hibernate.orm.mapping.xml.persistence.MyEntity;
 import io.quarkus.test.QuarkusUnitTest;
 
 public class IgnoreExplicitForJoinedFalseValueWithPersistenceXmlTest {

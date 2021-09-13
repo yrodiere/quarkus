@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.hbm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,19 +17,19 @@ import io.quarkus.hibernate.orm.SmokeTestUtils;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
- * Test that assigning an hbm.xml mapping file explicitly works as expected
- * when configuring the persistence unit through Quarkus' application.properties.
+ * Test that assigning an orm.xml mapping file explicitly to override annotations
+ * works as expected.
  */
-public class HbmXmlQuarkusConfigTest {
+public class OrmXmlAnnotationOverrideTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
-                    .addClass(NonAnnotatedEntity.class)
-                    .addAsResource("application-mapping-files-my-hbm-xml.properties", "application.properties")
-                    .addAsResource("META-INF/hbm-simple.xml", "my-hbm.xml"));
+                    .addClass(AnnotatedEntity.class)
+                    .addAsResource("application-mapping-files-my-orm-xml.properties", "application.properties")
+                    .addAsResource("META-INF/orm-override.xml", "my-orm.xml"));
 
     @Inject
     EntityManagerFactory entityManagerFactory;
@@ -40,7 +40,7 @@ public class HbmXmlQuarkusConfigTest {
     @Test
     @Transactional
     public void ormXmlTakenIntoAccount() {
-        assertThat(SchemaUtil.getColumnNames(entityManagerFactory, NonAnnotatedEntity.class))
+        assertThat(SchemaUtil.getColumnNames(entityManagerFactory, AnnotatedEntity.class))
                 .contains("thename")
                 .doesNotContain("name");
     }
@@ -49,7 +49,8 @@ public class HbmXmlQuarkusConfigTest {
     @Transactional
     public void smokeTest() {
         SmokeTestUtils.testSimplePersistRetrieveUpdateDelete(entityManager,
-                NonAnnotatedEntity.class, NonAnnotatedEntity::new,
-                NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
+                AnnotatedEntity.class, AnnotatedEntity::new,
+                AnnotatedEntity::getId, AnnotatedEntity::setName, AnnotatedEntity::getName);
     }
+
 }

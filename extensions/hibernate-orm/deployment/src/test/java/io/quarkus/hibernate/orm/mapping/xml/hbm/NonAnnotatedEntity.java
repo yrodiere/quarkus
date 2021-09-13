@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.hbm;
+package io.quarkus.hibernate.orm.mapping.xml.hbm;
 
 public class NonAnnotatedEntity {
 

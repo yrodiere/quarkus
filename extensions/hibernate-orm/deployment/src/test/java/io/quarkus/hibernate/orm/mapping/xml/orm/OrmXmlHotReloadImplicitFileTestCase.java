@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static io.restassured.RestAssured.when;
 import static org.assertj.core.api.Assertions.assertThat;

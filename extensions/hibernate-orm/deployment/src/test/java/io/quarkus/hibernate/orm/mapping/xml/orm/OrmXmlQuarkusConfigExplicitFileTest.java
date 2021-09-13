@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,9 +18,9 @@ import io.quarkus.test.QuarkusUnitTest;
 
 /**
  * Test that assigning an orm.xml mapping file explicitly works as expected
- * when configuring the persistence unit through persistence.xml.
+ * when configuring the persistence unit through Quarkus' application.properties.
  */
-public class OrmXmlPersistenceXmlExplicitFileTest {
+public class OrmXmlQuarkusConfigExplicitFileTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
@@ -28,9 +28,8 @@ public class OrmXmlPersistenceXmlExplicitFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
-                    .addAsResource("application-datasource-only.properties", "application.properties")
-                    .addAsManifestResource("META-INF/persistence-mapping-file-explicit-orm-xml.xml", "persistence.xml")
-                    .addAsManifestResource("META-INF/orm-simple.xml", "my-orm.xml"));
+                    .addAsResource("application-mapping-files-my-orm-xml.properties", "application.properties")
+                    .addAsResource("META-INF/orm-simple.xml", "my-orm.xml"));
 
     @Inject
     EntityManagerFactory entityManagerFactory;

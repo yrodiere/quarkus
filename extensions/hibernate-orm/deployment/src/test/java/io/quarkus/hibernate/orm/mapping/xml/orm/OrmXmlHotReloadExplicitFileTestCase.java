@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.hbm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static io.restassured.RestAssured.when;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,16 +12,17 @@ import io.quarkus.hibernate.orm.SchemaUtil;
 import io.quarkus.hibernate.orm.SmokeTestUtils;
 import io.quarkus.test.QuarkusDevModeTest;
 
-public class HbmXmlHotReloadExplicitFileTestCase {
+public class OrmXmlHotReloadExplicitFileTestCase {
     @RegisterExtension
     final static QuarkusDevModeTest TEST = new QuarkusDevModeTest()
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
-                    .addClass(HbmXmlHotReloadTestResource.class)
-                    .addAsResource("application-mapping-files-my-hbm-xml.properties", "application.properties")
-                    .addAsResource("META-INF/hbm-simple.xml", "my-hbm.xml"));
+                    .addClass(OrmXmlHotReloadTestResource.class)
+                    .addAsResource("application-datasource-only.properties", "application.properties")
+                    .addAsManifestResource("META-INF/persistence-mapping-file-explicit-orm-xml.xml", "persistence.xml")
+                    .addAsManifestResource("META-INF/orm-simple.xml", "my-orm.xml"));
 
     @Test
     public void changeOrmXml() {
@@ -29,8 +30,8 @@ public class HbmXmlHotReloadExplicitFileTestCase {
                 .contains("thename")
                 .doesNotContain("name", "thename2");
 
-        TEST.modifyResourceFile("my-hbm.xml", s -> s.replace("<property name=\"name\" column=\"thename\"/>",
-                "<property name=\"name\" column=\"thename2\"/>"));
+        TEST.modifyResourceFile("META-INF/my-orm.xml",
+                s -> s.replace("<column name=\"thename\" />", "<column name=\"thename2\" />"));
 
         assertThat(getColumnNames())
                 .contains("thename2")
@@ -38,7 +39,7 @@ public class HbmXmlHotReloadExplicitFileTestCase {
     }
 
     private String[] getColumnNames() {
-        return when().get("/hbm-xml-hot-reload-test/column-names")
+        return when().get("/orm-xml-hot-reload-test/column-names")
                 .then().extract().body().asString()
                 .split("\n");
     }

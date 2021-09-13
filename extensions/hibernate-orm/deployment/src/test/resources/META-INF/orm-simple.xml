@@ -3,7 +3,7 @@
         xmlns="http://java.sun.com/xml/ns/persistence/orm"
         version="2.0">
 
-    <entity class="io.quarkus.hibernate.orm.xml.orm.NonAnnotatedEntity">
+    <entity class="io.quarkus.hibernate.orm.mapping.xml.orm.NonAnnotatedEntity">
         <attributes>
             <id name="id">
                 <generated-value strategy="IDENTITY" />

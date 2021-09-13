@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.specialmappings;
+package io.quarkus.hibernate.orm.mapping.abstractsuperentity;
 
 import java.io.Serializable;
 import java.util.Objects;

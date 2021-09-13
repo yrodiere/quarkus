@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.xml.orm;
+package io.quarkus.hibernate.orm.mapping.xml.orm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,10 +17,10 @@ import io.quarkus.hibernate.orm.SmokeTestUtils;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
- * Test that assigning an orm.xml mapping file explicitly to override annotations
- * works as expected.
+ * Test that the implicit mapping file META-INF/orm.xml is ignored
+ * for persistence units configured through Quarkus' application.properties.
  */
-public class OrmXmlAnnotationOverrideTest {
+public class OrmXmlPersistenceXmlNoFileTest {
 
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
@@ -28,8 +28,14 @@ public class OrmXmlAnnotationOverrideTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(AnnotatedEntity.class)
-                    .addAsResource("application-mapping-files-my-orm-xml.properties", "application.properties")
-                    .addAsResource("META-INF/orm-override.xml", "my-orm.xml"));
+                    .addAsResource("application-datasource-only.properties", "application.properties")
+                    .addAsManifestResource("META-INF/persistence-mapping-file-no-file.xml", "persistence.xml")
+                    // For a Quarkus persistence unit,
+                    // we will ignore the default META-INF/orm.xml unless it's specified explicitly.
+                    // That's to reduce the amount of magic needed,
+                    // and to make sure users can still build an application when they depend on libraries
+                    // that contain undesirable orm.xml files (potentially multiple ones, which would fail).
+                    .addAsManifestResource("META-INF/orm-invalid.xml", "orm.xml"));
 
     @Inject
     EntityManagerFactory entityManagerFactory;
@@ -39,10 +45,10 @@ public class OrmXmlAnnotationOverrideTest {
 
     @Test
     @Transactional
-    public void ormXmlTakenIntoAccount() {
+    public void ormXmlIgnored() {
         assertThat(SchemaUtil.getColumnNames(entityManagerFactory, AnnotatedEntity.class))
-                .contains("thename")
-                .doesNotContain("name");
+                .contains("name")
+                .doesNotContain("someothername");
     }
 
     @Test

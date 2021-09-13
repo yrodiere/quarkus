@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.specialmappings;
+package io.quarkus.hibernate.orm.mapping.abstractsuperentity;
 
 import javax.persistence.Entity;
 
