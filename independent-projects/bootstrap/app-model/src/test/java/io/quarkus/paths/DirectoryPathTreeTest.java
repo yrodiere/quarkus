@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -59,12 +60,25 @@ public class DirectoryPathTreeTest {
     }
 
     @Test
-    public void acceptAbsolutePath() throws Exception {
+    public void acceptUnixAbsolutePath() throws Exception {
         final Path root = resolveTreeRoot("root");
         final PathTree tree = PathTree.ofDirectoryOrArchive(root);
         try {
             tree.accept("/README.md", visit -> {
-                fail("Absolute paths aren't allwed");
+                fail("Absolute paths aren't allowed");
+            });
+        } catch (IllegalArgumentException e) {
+            // expected
+        }
+    }
+
+    @Test
+    public void acceptOSSpecificAbsolutePath() throws Exception {
+        final Path root = resolveTreeRoot("root");
+        final PathTree tree = PathTree.ofDirectoryOrArchive(root);
+        try {
+            tree.accept(root.resolve("README.md").toAbsolutePath().toString(), visit -> {
+                fail("Absolute paths aren't allowed");
             });
         } catch (IllegalArgumentException e) {
             // expected
@@ -79,7 +93,7 @@ public class DirectoryPathTreeTest {
         assertThat(absolute).exists();
         try {
             tree.accept(absolute.toString(), visit -> {
-                fail("Absolute paths aren't allwed");
+                fail("Absolute paths aren't allowed");
             });
         } catch (IllegalArgumentException e) {
             // expected

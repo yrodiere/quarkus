@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import io.quarkus.fs.util.ZipUtils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URL;
@@ -12,8 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import io.quarkus.fs.util.ZipUtils;
 
 public class JarPathTreeTest {
 
@@ -61,14 +63,26 @@ public class JarPathTreeTest {
     }
 
     @Test
-    public void acceptAbsolutePath() throws Exception {
+    public void acceptUnixAbsolutePath() throws Exception {
         final PathTree tree = PathTree.ofDirectoryOrArchive(root);
         try {
             tree.accept("/README.md", visit -> {
                 fail("Absolute paths aren't allowed");
             });
         } catch (IllegalArgumentException e) {
-            //expected
+            // expected
+        }
+    }
+
+    @Test
+    public void acceptOSSpecificAbsolutePath() throws Exception {
+        final PathTree tree = PathTree.ofDirectoryOrArchive(root);
+        try {
+            tree.accept(root.resolve("README.md").toAbsolutePath().toString(), visit -> {
+                fail("Absolute paths aren't allowed");
+            });
+        } catch (IllegalArgumentException e) {
+            // expected
         }
     }
 
