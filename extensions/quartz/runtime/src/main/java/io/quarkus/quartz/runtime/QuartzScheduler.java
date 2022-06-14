@@ -523,6 +523,8 @@ public class QuartzScheduler implements Scheduler {
                 props.put(StdSchedulerFactory.PROP_JOB_STORE_PREFIX + ".acquireTriggersWithinLock", "true");
                 props.put(StdSchedulerFactory.PROP_JOB_STORE_PREFIX + ".clusterCheckinInterval",
                         "" + quartzSupport.getBuildTimeConfig().clusterCheckinInterval);
+                props.put(StdSchedulerFactory.PROP_JOB_STORE_PREFIX + ".selectWithLockSQL",
+                        buildTimeConfig.selectWithLockSql);
             }
 
             if (buildTimeConfig.storeType.isNonManagedTxJobStore()) {
