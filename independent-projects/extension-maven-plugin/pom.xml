@@ -29,6 +29,8 @@
         <tag>HEAD</tag>
     </scm>
     <properties>
+        <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
+        <javax.inject.version>1</javax.inject.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.source>11</maven.compiler.source>
@@ -78,9 +80,9 @@
                                             <!-- Exclude javax dependencies in favor of Jakarta -->
                                             <exclude>javax.activation:activation</exclude>
                                             <exclude>javax.activation:javax.activation-api</exclude>
-                                            <exclude>javax.annotation:javax.annotation-api</exclude>
+                                            <!-- we allow javax.annotation-api for Maven -->
                                             <exclude>javax.enterprise:cdi-api</exclude>
-                                            <exclude>javax.inject:javax.inject</exclude>
+                                            <!-- we allow javax.inject for Maven -->
                                             <exclude>javax.json:javax.json-api</exclude>
                                             <exclude>javax.json.bind:javax.json.bind-api</exclude>
                                             <exclude>org.glassfish:javax.json</exclude>

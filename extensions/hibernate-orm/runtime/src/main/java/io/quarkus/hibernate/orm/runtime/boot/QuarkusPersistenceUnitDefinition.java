@@ -6,9 +6,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
-import javax.persistence.SharedCacheMode;
-import javax.persistence.ValidationMode;
-import javax.persistence.spi.PersistenceUnitTransactionType;
+import jakarta.persistence.SharedCacheMode;
+import jakarta.persistence.ValidationMode;
+import jakarta.persistence.spi.PersistenceUnitTransactionType;
 
 import org.hibernate.jpa.boot.spi.PersistenceUnitDescriptor;
 
