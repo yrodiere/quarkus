@@ -209,19 +209,19 @@ public final class HibernateReactiveProcessor {
             BuildProducer<HotDeploymentWatchedFileBuildItem> hotDeploymentWatchedFiles,
             List<DatabaseKindDialectBuildItem> dbKindDialectBuildItems) {
         //we have no persistence.xml so we will create a default one
-        String persistenceUnitConfigName = PersistenceUnitUtil.DEFAULT_PERSISTENCE_UNIT_NAME;
+        String persistenceUnitName = PersistenceUnitUtil.DEFAULT_PERSISTENCE_UNIT_NAME;
 
         Optional<String> explicitDialect = persistenceUnitConfig.dialect.dialect;
         String dialect;
         if (explicitDialect.isPresent()) {
             dialect = explicitDialect.get();
         } else {
-            dialect = Dialects.guessDialect(persistenceUnitConfigName, dbKind, dbKindDialectBuildItems);
+            dialect = Dialects.guessDialect(persistenceUnitName, dbKind, dbKindDialectBuildItems);
         }
 
         // we found one
         ParsedPersistenceXmlDescriptor desc = new ParsedPersistenceXmlDescriptor(null); //todo URL
-        desc.setName("default-reactive");
+        desc.setName(persistenceUnitName);
         desc.setTransactionType(PersistenceUnitTransactionType.RESOURCE_LOCAL);
         desc.getProperties().setProperty(AvailableSettings.DIALECT, dialect);
         desc.setExcludeUnlistedClasses(true);
@@ -297,7 +297,7 @@ public final class HibernateReactiveProcessor {
                     hotDeploymentWatchedFiles.produce(new HotDeploymentWatchedFileBuildItem(importFile));
                 } else if (persistenceUnitConfig.sqlLoadScript.isPresent()) {
                     //raise exception if explicit file is not present (i.e. not the default)
-                    String propertyName = HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitConfigName, "sql-load-script");
+                    String propertyName = HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitName, "sql-load-script");
                     throw new ConfigurationException(
                             "Unable to find file referenced in '"
                                     + propertyName + "="
