@@ -1,9 +1,9 @@
 package io.quarkus.hibernate.reactive.runtime;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.Typed;
 import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
 
@@ -19,7 +19,7 @@ public class ReactiveSessionFactoryProducer {
     EntityManagerFactory emf;
 
     @Produces
-    @Singleton
+    @ApplicationScoped
     @DefaultBean
     @Unremovable
     @Typed(Mutiny.SessionFactory.class)
