@@ -11,8 +11,10 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.hibernate.envers.HibernateEnversBuildTimeConfig;
 import io.quarkus.hibernate.envers.HibernateEnversRecorder;
+import io.quarkus.hibernate.envers.HibernateEnversRuntimeConfig;
 import io.quarkus.hibernate.orm.deployment.AdditionalJpaModelBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceUnitDescriptorBuildItem;
+import io.quarkus.hibernate.orm.deployment.integration.HibernateOrmIntegrationRuntimeConfiguredBuildItem;
 import io.quarkus.hibernate.orm.deployment.integration.HibernateOrmIntegrationStaticConfiguredBuildItem;
 
 @BuildSteps(onlyIf = HibernateEnversEnabled.class)
@@ -48,11 +50,24 @@ public final class HibernateEnversProcessor {
             List<PersistenceUnitDescriptorBuildItem> persistenceUnitDescriptorBuildItems,
             BuildProducer<HibernateOrmIntegrationStaticConfiguredBuildItem> integrationProducer) {
         for (PersistenceUnitDescriptorBuildItem puDescriptor : persistenceUnitDescriptorBuildItems) {
+            integrationProducer.produce(
+                    new HibernateOrmIntegrationStaticConfiguredBuildItem(HIBERNATE_ENVERS,
+                            puDescriptor.getPersistenceUnitName())
+                            .setInitListener(recorder.createStaticInitListener(buildTimeConfig))
+                            .setXmlMappingRequired(true));
+        }
+    }
+
+    @BuildStep
+    @Record(ExecutionTime.RUNTIME_INIT)
+    public void applyRuntimeConfig(HibernateEnversRecorder recorder, HibernateEnversRuntimeConfig runtimeConfig,
+            List<PersistenceUnitDescriptorBuildItem> persistenceUnitDescriptorBuildItems,
+            BuildProducer<HibernateOrmIntegrationRuntimeConfiguredBuildItem> integrationProducer) {
+        for (PersistenceUnitDescriptorBuildItem puDescriptor : persistenceUnitDescriptorBuildItems) {
             String puName = puDescriptor.getPersistenceUnitName();
             integrationProducer.produce(
-                    new HibernateOrmIntegrationStaticConfiguredBuildItem(HIBERNATE_ENVERS, puName)
-                            .setInitListener(recorder.createStaticInitListener(buildTimeConfig, puName))
-                            .setXmlMappingRequired(true));
+                    new HibernateOrmIntegrationRuntimeConfiguredBuildItem(HIBERNATE_ENVERS, puName)
+                            .setInitListener(recorder.createRuntimeInitListener(runtimeConfig, puName)));
         }
     }
 }

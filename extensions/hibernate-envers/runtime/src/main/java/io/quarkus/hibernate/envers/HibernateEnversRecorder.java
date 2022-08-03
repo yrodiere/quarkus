@@ -1,6 +1,7 @@
 package io.quarkus.hibernate.envers;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import org.hibernate.boot.Metadata;
@@ -8,36 +9,28 @@ import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.configuration.EnversSettings;
 
+import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationRuntimeInitListener;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationStaticInitListener;
 import io.quarkus.runtime.annotations.Recorder;
+import io.quarkus.runtime.configuration.ConfigurationException;
 
 @Recorder
 public class HibernateEnversRecorder {
 
-    public HibernateOrmIntegrationStaticInitListener createStaticInitListener(HibernateEnversBuildTimeConfig buildTimeConfig,
-            String puName) {
-        return new HibernateEnversIntegrationStaticInitListener(buildTimeConfig, puName);
+    public HibernateOrmIntegrationStaticInitListener createStaticInitListener(HibernateEnversBuildTimeConfig buildTimeConfig) {
+        return new HibernateEnversIntegrationStaticInitListener(buildTimeConfig);
     }
 
     private static final class HibernateEnversIntegrationStaticInitListener
             implements HibernateOrmIntegrationStaticInitListener {
         private final HibernateEnversBuildTimeConfig buildTimeConfig;
-        private final String puName;
 
-        private HibernateEnversIntegrationStaticInitListener(HibernateEnversBuildTimeConfig buildTimeConfig, String puName) {
+        private HibernateEnversIntegrationStaticInitListener(HibernateEnversBuildTimeConfig buildTimeConfig) {
             this.buildTimeConfig = buildTimeConfig;
-            this.puName = puName;
         }
 
         @Override
         public void contributeBootProperties(BiConsumer<String, Object> propertyCollector) {
-            var puConfig = buildTimeConfig.getAllPersistenceUnitConfigsAsMap().get(puName);
-            if (puConfig != null && puConfig.active.isPresent() && !puConfig.active.get()) {
-                propertyCollector.accept(EnversService.INTEGRATION_ENABLED, "false");
-                // Do not process other properties: Hibernate Envers is inactive anyway.
-                return;
-            }
-
             addConfig(propertyCollector, EnversSettings.STORE_DATA_AT_DELETE, buildTimeConfig.storeDataAtDelete);
             addConfig(propertyCollector, EnversSettings.AUDIT_TABLE_SUFFIX, buildTimeConfig.auditTableSuffix);
             addConfig(propertyCollector, EnversSettings.AUDIT_TABLE_PREFIX, buildTimeConfig.auditTablePrefix);
@@ -111,6 +104,73 @@ public class HibernateEnversRecorder {
         @Override
         public void onMetadataInitialized(Metadata metadata, BootstrapContext bootstrapContext,
                 BiConsumer<String, Object> propertyCollector) {
+        }
+    }
+
+    public HibernateOrmIntegrationRuntimeInitListener createRuntimeInitListener(
+            HibernateEnversRuntimeConfig runtimeConfig, String persistenceUnitName) {
+        HibernateEnversRuntimeConfigPersistenceUnit puConfig = runtimeConfig.getAllPersistenceUnitConfigsAsMap()
+                .get(persistenceUnitName);
+        return new HibernateEnversIntegrationRuntimeInitListener(puConfig);
+    }
+
+    private static final class HibernateEnversIntegrationRuntimeInitListener
+            implements HibernateOrmIntegrationRuntimeInitListener {
+        private final HibernateEnversRuntimeConfigPersistenceUnit runtimeConfig;
+
+        private HibernateEnversIntegrationRuntimeInitListener(HibernateEnversRuntimeConfigPersistenceUnit runtimeConfig) {
+            this.runtimeConfig = runtimeConfig;
+        }
+
+        @Override
+        public void contributeRuntimeProperties(BiConsumer<String, Object> propertyCollector) {
+            if (runtimeConfig != null) {
+                if (runtimeConfig.active.isPresent() && !runtimeConfig.active.get()) {
+                    propertyCollector.accept(EnversService.INTEGRATION_ENABLED, "false");
+                    // Do not process other properties: Hibernate Envers is inactive anyway.
+                    return;
+                }
+
+                // In the future, add support for other runtime configuration properties here.
+            }
+        }
+    }
+
+    public HibernateOrmIntegrationRuntimeInitListener createRuntimeInitInactiveListener() {
+        return new HibernateEnversIntegrationRuntimeInitInactiveListener();
+    }
+
+    private static final class HibernateEnversIntegrationRuntimeInitInactiveListener
+            implements HibernateOrmIntegrationRuntimeInitListener {
+        private HibernateEnversIntegrationRuntimeInitInactiveListener() {
+        }
+
+        @Override
+        public void contributeRuntimeProperties(BiConsumer<String, Object> propertyCollector) {
+            // Not strictly necessary since this should be set during static init,
+            // but let's be on the safe side.
+            propertyCollector.accept(EnversService.INTEGRATION_ENABLED, "false");
+        }
+    }
+
+    public void checkNoExplicitActiveTrue(HibernateEnversRuntimeConfig runtimeConfig) {
+        for (var entry : runtimeConfig.getAllPersistenceUnitConfigsAsMap().entrySet()) {
+            var config = entry.getValue();
+            if (config.active.isPresent() && config.active.get()) {
+                var puName = entry.getKey();
+                String enabledPropertyKey = HibernateEnversRuntimeConfig.extensionPropertyKey("enabled");
+                String activePropertyKey = HibernateEnversRuntimeConfig.persistenceUnitPropertyKey(puName, "active");
+                throw new ConfigurationException(
+                        "Hibernate Envers activated explicitly for persistence unit '" + puName
+                                + "', but the Hibernate Envers extension was disabled at build time."
+                                + " If you want Hibernate Envers to be active for this persistence unit, you must set '"
+                                + enabledPropertyKey
+                                + "' to 'true' at build time."
+                                + " If you don't want Hibernate Envers to be active for this persistence unit, you must leave '"
+                                + activePropertyKey
+                                + "' unset or set it to 'false'.",
+                        Set.of(enabledPropertyKey, activePropertyKey));
+            }
         }
     }
 }

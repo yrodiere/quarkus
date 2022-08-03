@@ -6,7 +6,7 @@ import io.quarkus.runtime.annotations.ConfigGroup;
 import io.quarkus.runtime.annotations.ConfigItem;
 
 @ConfigGroup
-public class HibernateEnversBuildTimeConfigPersistenceUnit {
+public class HibernateEnversRuntimeConfigPersistenceUnit {
 
     /**
      * Whether Hibernate Envers should be active for this persistence unit at runtime.
