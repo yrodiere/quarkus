@@ -109,7 +109,7 @@ public interface QuarkusTransaction {
      * @param task The task to run in a transaction
      */
     static void run(Runnable task) {
-        run(runOptions(), task);
+        run(RunOptions.Semantic.REQUIRE_NEW, runOptions(), task);
     }
 
     /**
@@ -120,7 +120,25 @@ public interface QuarkusTransaction {
      * @param task The task to run in a transaction
      */
     static void run(RunOptions options, Runnable task) {
-        call(options, new Callable<Object>() {
+        call(options.semantic, options, new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                task.run();
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Runs a task in a new transaction with the default timeout, specifying the semantics explicitly.
+     *
+     * @param semantics Controls transaction behaviour in the presence or absence of an existing transaction.
+     * @param options Options that apply to the new transaction. {@link RunOptions#semantic(RunOptions.Semantic)} is ignored.
+     * @param task The task to run in a transaction
+     */
+    // TODO maybe use Transactional.TxType instead of RunOptions.Semantic? Not sure...
+    static void run(RunOptions.Semantic semantics, RunOptions options, Runnable task) {
+        call(semantics, options, new Callable<Object>() {
             @Override
             public Object call() throws Exception {
                 task.run();
@@ -147,10 +165,55 @@ public interface QuarkusTransaction {
      * <p>
      * If the task throws a checked exception it will be wrapped with a {@link QuarkusTransactionException}
      *
+     * @param options Options that apply to the new transaction
+     * @param task The task to run in a transaction
+     * @deprecated For the same behavior, use {@link #callIsolated(RunOptions, Callable)} instead,
+     * For different or configurable semantics, use {@link #callReusing(RunOptions, Callable)}
+     * or {@link #call(RunOptions.Semantic, RunOptions, Callable)}.
+     */
+    @Deprecated
+    static <T> T call(RunOptions options, Callable<T> task) {
+        return QuarkusTransactionImpl.call(RunOptions.Semantic.REQUIRE_NEW, options, task);
+    }
+
+    /**
+     * Calls a task in the existing transaction, or a new one if there is none, with the default timeout,
+     * using {@link Transactional.TxType#REQUIRED} semantics.
+     * <p>
+     * If the task throws a checked exception it will be wrapped with a {@link QuarkusTransactionException}
+     *
+     * @param options Options that apply to the new transaction. {@link RunOptions#semantic(RunOptions.Semantic)} is ignored.
      * @param task The task to run in a transaction
      */
-    static <T> T call(RunOptions options, Callable<T> task) {
-        return QuarkusTransactionImpl.call(options, task);
+    static <T> T callReusing(RunOptions options, Callable<T> task) {
+        return QuarkusTransactionImpl.call(RunOptions.Semantic.JOIN_EXISTING, options, task);
+    }
+
+    /**
+     * Calls a task in a new transaction with the default timeout,
+     * using {@link Transactional.TxType#REQUIRES_NEW} semantics.
+     * <p>
+     * If the task throws a checked exception it will be wrapped with a {@link QuarkusTransactionException}
+     *
+     * @param options Options that apply to the new transaction. {@link RunOptions#semantic(RunOptions.Semantic)} is ignored.
+     * @param task The task to run in a transaction
+     */
+    static <T> T callIsolated(RunOptions options, Callable<T> task) {
+        return QuarkusTransactionImpl.call(RunOptions.Semantic.REQUIRE_NEW, options, task);
+    }
+
+    /**
+     * Calls a task in a new transaction with the default timeout, specifying the semantics explicitly.
+     * <p>
+     * If the task throws a checked exception it will be wrapped with a {@link QuarkusTransactionException}
+     *
+     * @param semantics Controls transaction behaviour in the presence or absence of an existing transaction.
+     * @param options Options that apply to the new transaction. {@link RunOptions#semantic(RunOptions.Semantic)} is ignored.
+     * @param task The task to run in a transaction
+     */
+    // TODO maybe use Transactional.TxType instead of RunOptions.Semantic? Not sure...
+    static <T> T call(RunOptions.Semantic semantics, RunOptions options, Callable<T> task) {
+        return QuarkusTransactionImpl.call(semantics, options, task);
     }
 
     /**

@@ -23,8 +23,8 @@ class QuarkusTransactionImpl {
     private static TransactionManager cachedTransactionManager;
     private static UserTransaction cachedUserTransaction;
 
-    public static <T> T call(RunOptions options, Callable<T> task) {
-        switch (options.semantic) {
+    public static <T> T call(RunOptions.Semantic semantics, RunOptions options, Callable<T> task) {
+        switch (semantics) {
             case REQUIRE_NEW:
                 return callRequireNew(options, task);
             case DISALLOW_EXISTING:
