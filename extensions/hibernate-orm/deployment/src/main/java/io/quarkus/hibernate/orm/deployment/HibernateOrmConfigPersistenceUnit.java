@@ -196,17 +196,6 @@ public class HibernateOrmConfigPersistenceUnit {
     public HibernateOrmConfigPersistenceUnitDiscriminator discriminator;
 
     /**
-     * Identifiers can be quoted using one of the available strategies.
-     * <p>
-     * Set to {@code none} by default, meaning no identifiers will be quoted. If set to {@code all}, all identifiers and column
-     * definitions will be quoted. Additionally, setting it to {@code all-except-column-definitions} will skip the column
-     * definitions, which can usually be required when they exist, or else use the option {@code only-keywords} to quote only
-     * identifiers deemed SQL keywords by the Hibernate ORM dialect.
-     */
-    @ConfigItem(defaultValue = "none", name = "quote-identifiers.strategy")
-    public IdentifierQuotingStrategy identifierQuotingStrategy;
-
-    /**
      * The default in Quarkus is for 2nd level caching to be enabled,
      * and a good implementation is already integrated for you.
      * <p>
@@ -274,7 +263,6 @@ public class HibernateOrmConfigPersistenceUnit {
                 multitenantSchemaDatasource.isPresent() ||
                 fetch.isAnyPropertySet() ||
                 discriminator.isAnyPropertySet() ||
-                identifierQuotingStrategy != IdentifierQuotingStrategy.NONE ||
                 !unsupportedProperties.isEmpty();
     }
 
@@ -387,8 +375,20 @@ public class HibernateOrmConfigPersistenceUnit {
         @Deprecated
         public boolean globallyQuotedIdentifiers;
 
+        /**
+         * Identifiers can be quoted using one of the available strategies.
+         * <p>
+         * Set to {@code none} by default, meaning no identifiers will be quoted. If set to {@code all}, all identifiers and column
+         * definitions will be quoted. Additionally, setting it to {@code all-except-column-definitions} will skip the column
+         * definitions, which can usually be required when they exist, or else use the option {@code only-keywords} to quote only
+         * identifiers deemed SQL keywords by the Hibernate ORM dialect.
+         */
+        @ConfigItem(defaultValue = "none", name = "quote-identifiers.strategy")
+        public IdentifierQuotingStrategy identifierQuotingStrategy;
+
         public boolean isAnyPropertySet() {
             return !DEFAULT_CHARSET.equals(charset.name())
+                    || identifierQuotingStrategy != IdentifierQuotingStrategy.NONE
                     || globallyQuotedIdentifiers;
         }
     }

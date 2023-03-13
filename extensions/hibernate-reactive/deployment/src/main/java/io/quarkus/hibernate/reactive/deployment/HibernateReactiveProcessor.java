@@ -286,14 +286,14 @@ public final class HibernateReactiveProcessor {
                 persistenceUnitConfig.database.charset.name());
 
         // Quoting strategy
-        if (persistenceUnitConfig.identifierQuotingStrategy == IdentifierQuotingStrategy.ALL
-                || persistenceUnitConfig.identifierQuotingStrategy == IdentifierQuotingStrategy.ALL_EXCEPT_COLUMN_DEFINITIONS
+        if (persistenceUnitConfig.database.identifierQuotingStrategy == IdentifierQuotingStrategy.ALL
+                || persistenceUnitConfig.database.identifierQuotingStrategy == IdentifierQuotingStrategy.ALL_EXCEPT_COLUMN_DEFINITIONS
                 || persistenceUnitConfig.database.globallyQuotedIdentifiers) {
             desc.getProperties().setProperty(AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS, "true");
         }
-        if (persistenceUnitConfig.identifierQuotingStrategy == IdentifierQuotingStrategy.ALL_EXCEPT_COLUMN_DEFINITIONS) {
+        if (persistenceUnitConfig.database.identifierQuotingStrategy == IdentifierQuotingStrategy.ALL_EXCEPT_COLUMN_DEFINITIONS) {
             desc.getProperties().setProperty(AvailableSettings.GLOBALLY_QUOTED_IDENTIFIERS_SKIP_COLUMN_DEFINITIONS, "true");
-        } else if (persistenceUnitConfig.identifierQuotingStrategy == IdentifierQuotingStrategy.ONLY_KEYWORDS) {
+        } else if (persistenceUnitConfig.database.identifierQuotingStrategy == IdentifierQuotingStrategy.ONLY_KEYWORDS) {
             desc.getProperties().setProperty(AvailableSettings.KEYWORD_AUTO_QUOTING_ENABLED, "true");
         }
 
