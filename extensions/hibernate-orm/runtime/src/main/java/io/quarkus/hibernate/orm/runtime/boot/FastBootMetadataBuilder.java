@@ -425,7 +425,7 @@ public class FastBootMetadataBuilder {
         destroyServiceRegistry();
         ProxyDefinitions proxyClassDefinitions = ProxyDefinitions.createFromMetadata(storeableMetadata, preGeneratedProxies);
         return new RecordedState(dialect, storeableMetadata, buildTimeSettings, getIntegrators(),
-                providedServices, integrationSettingsBuilder.build(), proxyClassDefinitions, multiTenancyStrategy,
+                providedServices, integrationSettingsBuilder.build(), proxyClassDefinitions,
                 isReactive, fromPersistenceXml);
     }
 

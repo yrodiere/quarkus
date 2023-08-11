@@ -13,6 +13,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.Interceptor;
 import org.hibernate.SessionFactory;
 import org.hibernate.SessionFactoryObserver;
+import org.hibernate.binder.internal.TenantIdBinder;
 import org.hibernate.boot.internal.SessionFactoryOptionsBuilder;
 import org.hibernate.boot.model.process.spi.ManagedResources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -34,7 +35,6 @@ import org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator;
 import io.quarkus.arc.InjectableInstance;
 import io.quarkus.hibernate.orm.runtime.PersistenceUnitUtil;
 import io.quarkus.hibernate.orm.runtime.RuntimeSettings;
-import io.quarkus.hibernate.orm.runtime.migration.MultiTenancyStrategy;
 import io.quarkus.hibernate.orm.runtime.observers.QuarkusSessionFactoryObserverForDbVersionCheck;
 import io.quarkus.hibernate.orm.runtime.observers.SessionFactoryObserverForNamedQueryValidation;
 import io.quarkus.hibernate.orm.runtime.observers.SessionFactoryObserverForSchemaExport;
@@ -50,19 +50,17 @@ public class FastBootEntityManagerFactoryBuilder implements EntityManagerFactory
     private final Object validatorFactory;
     private final Object cdiBeanManager;
 
-    protected final MultiTenancyStrategy multiTenancyStrategy;
 
     public FastBootEntityManagerFactoryBuilder(
             PrevalidatedQuarkusMetadata metadata, String persistenceUnitName,
             StandardServiceRegistry standardServiceRegistry, RuntimeSettings runtimeSettings, Object validatorFactory,
-            Object cdiBeanManager, MultiTenancyStrategy multiTenancyStrategy) {
+            Object cdiBeanManager) {
         this.metadata = metadata;
         this.persistenceUnitName = persistenceUnitName;
         this.standardServiceRegistry = standardServiceRegistry;
         this.runtimeSettings = runtimeSettings;
         this.validatorFactory = validatorFactory;
         this.cdiBeanManager = cdiBeanManager;
-        this.multiTenancyStrategy = multiTenancyStrategy;
     }
 
     @Override
@@ -194,9 +192,9 @@ public class FastBootEntityManagerFactoryBuilder implements EntityManagerFactory
         BytecodeProvider bytecodeProvider = ssr.getService(BytecodeProvider.class);
         options.addSessionFactoryObservers(new SessionFactoryObserverForBytecodeEnhancer(bytecodeProvider));
 
-        // Should be added in case of discriminator strategy too, that is not handled by options.isMultiTenancyEnabled()
         if (options.isMultiTenancyEnabled()
-                || (multiTenancyStrategy != null && multiTenancyStrategy != MultiTenancyStrategy.NONE)) {
+                // Should be added in case of discriminator strategy too, that is not handled by options.isMultiTenancyEnabled()
+                || metadata.getFilterDefinition(TenantIdBinder.FILTER_NAME) != null) {
             options.applyCurrentTenantIdentifierResolver(new HibernateCurrentTenantIdentifierResolver(persistenceUnitName));
         }
 
