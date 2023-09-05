@@ -499,6 +499,118 @@ public class HibernateOrmConfigPersistenceUnit {
             LAST
         }
 
+        public enum InsertStrategy {
+            /**
+             * When an entity insertion requires inserting into multiple tables,
+             * use a CTE (Common Table Expression) to hold temporary entity data.
+             *
+             * This does not involve any extra table
+             * and does not require any particular permissions on the schema,
+             * but is not supported by all database vendors.
+             *
+             * @asciidoclet
+             */
+            CTE,
+            /**
+             * When an entity insertion requires inserting into multiple tables,
+             * uses a temporary table to hold temporary entity data.
+             * The temporary table is created/dropped in each database session
+             * and is not visible from other sessions.
+             *
+             * This does not involve any extra global table visible from all sessions
+             * and does not require any particular permissions on the schema,
+             * but is not supported by all database vendors.
+             *
+             * @asciidoclet
+             */
+            LOCAL_TEMPORARY,
+            /**
+             * When an entity insertion requires inserting into multiple tables,
+             * uses a temporary table to hold temporary entity data.
+             * There is one temporary table by entity type requiring such inserts,
+             * created/dropped on application startup/shutdown,
+             * and it is visible from other sessions.
+             *
+             * Alternatively, the table creation/dropping on application startup/shutdown
+             * can be disabled with
+             * `quarkus.hibernate-orm.query.global-temporary.create-tables = false`
+             * and `quarkus.hibernate-orm.query.global-temporary.drop-tables = false`
+             * if you intend to create/drop the tables yourself as part of your schema.
+             *
+             * This should be supported by all database vendors,
+             * but involves an extra global table visible from all sessions
+             * and may require permissions on the schema
+             * (if you don't disable automatic creation/dropping).
+             *
+             * @asciidoclet
+             */
+            GLOBAL_TEMPORARY
+        }
+
+        public enum MutationStrategy {
+            /**
+             * When an entity insertion requires updating/deleting rows from multiple tables,
+             * use a CTE (Common Table Expression) to hold temporary entity data.
+             *
+             * This does not involve any extra table
+             * or any extra database round-trip,
+             * and does not require any particular permissions on the schema,
+             * but is not supported by all database vendors.
+             *
+             * @asciidoclet
+             */
+            CTE,
+            /**
+             * When an entity insertion requires updating/deleting rows from multiple tables,
+             * uses a temporary table to hold temporary entity data.
+             * The temporary table is created/dropped in each database session
+             * and is not visible from other sessions.
+             *
+             * This does not involve any extra global table visible from all sessions
+             * or any extra database round-trip,
+             * and does not require any particular permissions on the schema,
+             * but is not supported by all database vendors.
+             *
+             * @asciidoclet
+             */
+            LOCAL_TEMPORARY,
+            /**
+             * When an entity insertion requires updating/deleting rows from multiple tables,
+             * uses a temporary table to hold temporary entity data.
+             * There is one temporary table by entity type requiring such inserts,
+             * created/dropped on application startup/shutdown,
+             * and it is visible from other sessions.
+             *
+             * Alternatively, the table creation/dropping on application startup/shutdown
+             * can be disabled with
+             * `quarkus.hibernate-orm.query.global-temporary.create-tables = false`
+             * and `quarkus.hibernate-orm.query.global-temporary.drop-tables = false`
+             * if you intend to create/drop the tables yourself as part of your schema.
+             *
+             * This should be supported by all database vendors,
+             * and does not involve any extra database round-trip,
+             * but involves an extra global table visible from all sessions
+             * and may require permissions on the schema
+             * (if you don't disable automatic creation/dropping).
+             *
+             * @asciidoclet
+             */
+            GLOBAL_TEMPORARY,
+            /**
+             * When an entity insertion requires updating/deleting rows from multiple tables,
+             * issue a first query to select the identifier values from the database and load them into the VM,
+             * then issue a second query to do the inserting.
+             *
+             * This should be supported by all database vendors,
+             * does not involve any extra global table visible from all sessions,
+             * and does not require any particular permissions on the schema,
+             * but involves an extra database round-trip.
+             *
+             * @asciidoclet
+             */
+            INLINE
+        }
+
         /**
          * The maximum size of the query plan cache.
          * see #{@value org.hibernate.cfg.AvailableSettings#QUERY_PLAN_CACHE_MAX_SIZE}
