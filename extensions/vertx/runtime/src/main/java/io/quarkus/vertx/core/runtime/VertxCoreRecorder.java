@@ -41,6 +41,7 @@ import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.ThreadPoolConfig;
 import io.quarkus.runtime.annotations.Recorder;
+import io.quarkus.runtime.util.ThreadUtil;
 import io.quarkus.vertx.core.runtime.config.AddressResolverConfiguration;
 import io.quarkus.vertx.core.runtime.config.ClusterConfiguration;
 import io.quarkus.vertx.core.runtime.config.EventBusConfiguration;
@@ -157,7 +158,7 @@ public class VertxCoreRecorder {
         synchronized (devModeThreads) {
             currentDevModeNewThreadCreationClassLoader = cl;
             for (var t : devModeThreads) {
-                t.setContextClassLoader(cl);
+                ThreadUtil.resetClassLoaderReferences(t, cl, true);
             }
         }
     }

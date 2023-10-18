@@ -6,6 +6,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
 
+import io.quarkus.bootstrap.app.QuarkusBootstrap;
+import io.quarkus.runtime.util.ThreadUtil;
+
 public class ForkJoinClassLoading {
 
     private static final Logger log = Logger.getLogger(ForkJoinClassLoading.class.getName());
@@ -18,15 +21,20 @@ public class ForkJoinClassLoading {
      * than nothing.
      *
      * Really we should just not use the common pool at all.
+     *
+     * @param classLoader The classloader to use as the new Context ClassLoader for ForkJoinPool threads.
+     * @param mode The bootstrap mode of the application being booted / shut down.
      */
-    public static void setForkJoinClassLoader(ClassLoader classLoader) {
+    public static void resetClassLoaderReferences(ClassLoader classLoader, QuarkusBootstrap.Mode mode) {
+        boolean aggressive = mode != QuarkusBootstrap.Mode.PROD;
+
         CountDownLatch allDone = new CountDownLatch(ForkJoinPool.getCommonPoolParallelism());
         CountDownLatch taskRelease = new CountDownLatch(1);
         for (int i = 0; i < ForkJoinPool.getCommonPoolParallelism(); ++i) {
             ForkJoinPool.commonPool().execute(new Runnable() {
                 @Override
                 public void run() {
-                    Thread.currentThread().setContextClassLoader(classLoader);
+                    ThreadUtil.resetClassLoaderReferences(Thread.currentThread(), classLoader, aggressive);
                     allDone.countDown();
                     try {
                         taskRelease.await();

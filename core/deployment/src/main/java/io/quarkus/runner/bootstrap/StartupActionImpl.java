@@ -91,9 +91,9 @@ public class StartupActionImpl implements StartupAction {
      * of the JVM will exit when the app stops.
      */
     public RunningQuarkusApplication runMainClass(String... args) throws Exception {
-
         //first we hack around class loading in the fork join pool
-        ForkJoinClassLoading.setForkJoinClassLoader(runtimeClassLoader);
+        ForkJoinClassLoading.resetClassLoaderReferences(runtimeClassLoader,
+                curatedApplication.getQuarkusBootstrap().getMode());
 
         //this clears any old state, and gets ready to start again
         ApplicationStateNotification.reset();
@@ -175,7 +175,8 @@ public class StartupActionImpl implements StartupAction {
                 | ClassNotFoundException e) {
             log.error("Failed to stop Quarkus", e);
         } finally {
-            ForkJoinClassLoading.setForkJoinClassLoader(ClassLoader.getSystemClassLoader());
+            ForkJoinClassLoading.resetClassLoaderReferences(runtimeClassLoader,
+                    curatedApplication.getQuarkusBootstrap().getMode());
             if (curatedApplication.getQuarkusBootstrap().getMode() == QuarkusBootstrap.Mode.TEST) {
                 //for tests, we just always shut down the curated application, as it is only used once
                 //dev mode might be about to restart, so we leave it
@@ -187,7 +188,8 @@ public class StartupActionImpl implements StartupAction {
     @Override
     public int runMainClassBlocking(String... args) throws Exception {
         //first we hack around class loading in the fork join pool
-        ForkJoinClassLoading.setForkJoinClassLoader(runtimeClassLoader);
+        ForkJoinClassLoading.resetClassLoaderReferences(runtimeClassLoader,
+                curatedApplication.getQuarkusBootstrap().getMode());
 
         //we have our class loaders
         ClassLoader old = Thread.currentThread().getContextClassLoader();
@@ -256,7 +258,8 @@ public class StartupActionImpl implements StartupAction {
      */
     public RunningQuarkusApplication run(String... args) throws Exception {
         //first we hack around class loading in the fork join pool
-        ForkJoinClassLoading.setForkJoinClassLoader(runtimeClassLoader);
+        ForkJoinClassLoading.resetClassLoaderReferences(runtimeClassLoader,
+                curatedApplication.getQuarkusBootstrap().getMode());
 
         //we have our class loaders
         ClassLoader old = Thread.currentThread().getContextClassLoader();
@@ -299,7 +302,8 @@ public class StartupActionImpl implements StartupAction {
                             runtimeClassLoader.close();
                         }
                     } finally {
-                        ForkJoinClassLoading.setForkJoinClassLoader(ClassLoader.getSystemClassLoader());
+                        ForkJoinClassLoading.resetClassLoaderReferences(runtimeClassLoader,
+                                curatedApplication.getQuarkusBootstrap().getMode());
 
                         for (var i : runtimeApplicationShutdownBuildItems) {
                             try {
