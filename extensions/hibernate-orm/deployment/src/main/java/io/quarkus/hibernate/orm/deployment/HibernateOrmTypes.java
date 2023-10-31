@@ -36,6 +36,7 @@ public final class HibernateOrmTypes {
             DotName.createSimple("org.hibernate.annotations.NamedNativeQuery"),
             DotName.createSimple("org.hibernate.annotations.NamedQueries"),
             DotName.createSimple("org.hibernate.annotations.NamedQuery"),
+            DotName.createSimple("org.hibernate.annotations.SoftDelete"),
             DotName.createSimple("org.hibernate.annotations.TypeRegistration"),
             DotName.createSimple("org.hibernate.annotations.TypeRegistrations"));
 
@@ -301,6 +302,7 @@ public final class HibernateOrmTypes {
             DotName.createSimple("org.hibernate.annotations.SecondaryRow"),
             DotName.createSimple("org.hibernate.annotations.SecondaryRows"),
             DotName.createSimple("org.hibernate.annotations.SelectBeforeUpdate"),
+            DotName.createSimple("org.hibernate.annotations.SoftDelete"),
             DotName.createSimple("org.hibernate.annotations.SortComparator"),
             DotName.createSimple("org.hibernate.annotations.SortNatural"),
             DotName.createSimple("org.hibernate.annotations.Source"),
