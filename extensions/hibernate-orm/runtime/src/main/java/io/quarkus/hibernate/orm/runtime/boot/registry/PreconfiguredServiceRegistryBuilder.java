@@ -38,7 +38,7 @@ import io.quarkus.hibernate.orm.runtime.customized.QuarkusJndiServiceInitiator;
 import io.quarkus.hibernate.orm.runtime.customized.QuarkusJtaPlatformInitiator;
 import io.quarkus.hibernate.orm.runtime.customized.QuarkusRuntimeProxyFactoryFactory;
 import io.quarkus.hibernate.orm.runtime.customized.QuarkusRuntimeProxyFactoryFactoryInitiator;
-import io.quarkus.hibernate.orm.runtime.recording.RecordedState;
+import io.quarkus.hibernate.orm.runtime.recording.StaticInitRecordedState;
 import io.quarkus.hibernate.orm.runtime.service.CfgXmlAccessServiceInitiatorQuarkus;
 import io.quarkus.hibernate.orm.runtime.service.FlatClassLoaderService;
 import io.quarkus.hibernate.orm.runtime.service.QuarkusImportSqlCommandExtractorInitiator;
@@ -65,7 +65,7 @@ public class PreconfiguredServiceRegistryBuilder {
     private final Collection<Integrator> integrators;
     private final StandardServiceRegistryImpl destroyedRegistry;
 
-    public PreconfiguredServiceRegistryBuilder(String puName, RecordedState rs) {
+    public PreconfiguredServiceRegistryBuilder(String puName, StaticInitRecordedState rs) {
         checkIsNotReactive(rs);
         this.initiators = buildQuarkusServiceInitiatorList(puName, rs);
         this.integrators = rs.getIntegrators();
@@ -74,7 +74,7 @@ public class PreconfiguredServiceRegistryBuilder {
                 .getServiceRegistry();
     }
 
-    private void checkIsNotReactive(RecordedState rs) {
+    private void checkIsNotReactive(StaticInitRecordedState rs) {
         if (rs.isReactive())
             throw new IllegalStateException("Booting a blocking Hibernate ORM serviceregistry on a Reactive RecordedState!");
     }
@@ -148,7 +148,8 @@ public class PreconfiguredServiceRegistryBuilder {
      *
      * @return
      */
-    private static List<StandardServiceInitiator<?>> buildQuarkusServiceInitiatorList(String puName, RecordedState rs) {
+    private static List<StandardServiceInitiator<?>> buildQuarkusServiceInitiatorList(String puName,
+            StaticInitRecordedState rs) {
         final ArrayList<StandardServiceInitiator<?>> serviceInitiators = new ArrayList<StandardServiceInitiator<?>>();
 
         //References to this object need to be injected in both the initiator for BytecodeProvider and for

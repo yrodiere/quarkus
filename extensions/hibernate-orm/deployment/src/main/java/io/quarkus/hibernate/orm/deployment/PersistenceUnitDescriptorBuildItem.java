@@ -2,16 +2,11 @@ package io.quarkus.hibernate.orm.deployment;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 import io.quarkus.builder.item.MultiBuildItem;
 import io.quarkus.deployment.Capabilities;
-import io.quarkus.deployment.Capability;
-import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDefinition;
+import io.quarkus.hibernate.orm.deployment.boot.xml.QuarkusXmlMapping;
 import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDescriptor;
-import io.quarkus.hibernate.orm.runtime.boot.xml.RecordableXmlMapping;
-import io.quarkus.hibernate.orm.runtime.customized.FormatMapperKind;
-import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationStaticDescriptor;
 import io.quarkus.hibernate.orm.runtime.recording.RecordedConfig;
 
 /**
@@ -26,16 +21,14 @@ public final class PersistenceUnitDescriptorBuildItem extends MultiBuildItem {
 
     private final RecordedConfig config;
     private final String multiTenancySchemaDataSource;
-    private final List<RecordableXmlMapping> xmlMappings;
+    private final List<QuarkusXmlMapping> xmlMappings;
     private final boolean isReactive;
     private final boolean fromPersistenceXml;
-    private final Optional<FormatMapperKind> jsonMapper;
-    private final Optional<FormatMapperKind> xmlMapper;
 
     public PersistenceUnitDescriptorBuildItem(QuarkusPersistenceUnitDescriptor descriptor,
             RecordedConfig config,
             String multiTenancySchemaDataSource,
-            List<RecordableXmlMapping> xmlMappings,
+            List<QuarkusXmlMapping> xmlMappings,
             boolean isReactive, boolean fromPersistenceXml, Capabilities capabilities) {
         this.descriptor = descriptor;
         this.config = config;
@@ -43,8 +36,10 @@ public final class PersistenceUnitDescriptorBuildItem extends MultiBuildItem {
         this.xmlMappings = xmlMappings;
         this.isReactive = isReactive;
         this.fromPersistenceXml = fromPersistenceXml;
-        this.jsonMapper = json(capabilities);
-        this.xmlMapper = xml(capabilities);
+    }
+
+    public QuarkusPersistenceUnitDescriptor getDescriptor() {
+        return descriptor;
     }
 
     public Collection<String> getManagedClassNames() {
@@ -75,30 +70,15 @@ public final class PersistenceUnitDescriptorBuildItem extends MultiBuildItem {
         return !xmlMappings.isEmpty();
     }
 
+    public List<QuarkusXmlMapping> getXmlMappings() {
+        return xmlMappings;
+    }
+
+    public boolean isReactive() {
+        return isReactive;
+    }
+
     public boolean isFromPersistenceXml() {
         return fromPersistenceXml;
-    }
-
-    public QuarkusPersistenceUnitDefinition asOutputPersistenceUnitDefinition(
-            List<HibernateOrmIntegrationStaticDescriptor> integrationStaticDescriptors) {
-        return new QuarkusPersistenceUnitDefinition(descriptor, config,
-                xmlMappings, isReactive, fromPersistenceXml, jsonMapper, xmlMapper, integrationStaticDescriptors);
-    }
-
-    private Optional<FormatMapperKind> json(Capabilities capabilities) {
-        if (capabilities.isPresent(Capability.JACKSON)) {
-            return Optional.of(FormatMapperKind.JACKSON);
-        }
-        if (capabilities.isPresent(Capability.JSONB)) {
-            return Optional.of(FormatMapperKind.JSONB);
-        }
-        return Optional.empty();
-    }
-
-    private Optional<FormatMapperKind> xml(Capabilities capabilities) {
-        if (capabilities.isPresent(Capability.JAXB)) {
-            return Optional.of(FormatMapperKind.JAXB);
-        }
-        return Optional.empty();
     }
 }

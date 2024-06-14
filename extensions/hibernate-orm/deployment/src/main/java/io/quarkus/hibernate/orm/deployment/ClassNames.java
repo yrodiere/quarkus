@@ -59,6 +59,8 @@ public final class ClassNames {
     public static final DotName FORMAT_MAPPER = createConstant("org.hibernate.type.format.FormatMapper");
     public static final DotName JSON_FORMAT = createConstant("io.quarkus.hibernate.orm.JsonFormat");
     public static final DotName XML_FORMAT = createConstant("io.quarkus.hibernate.orm.XmlFormat");
+    public static final DotName QUARKUS_INFINISPAN_REGION_FACTORY = createConstant(
+            "org.infinispan.quarkus.hibernate.cache.QuarkusInfinispanRegionFactory");
 
     public static final List<DotName> GENERATORS = List.of(
             createConstant("org.hibernate.generator.Assigned"),

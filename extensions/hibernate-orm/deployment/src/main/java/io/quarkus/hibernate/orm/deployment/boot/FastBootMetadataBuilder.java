@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.runtime.boot;
+package io.quarkus.hibernate.orm.deployment.boot;
 
 import static org.hibernate.cfg.AvailableSettings.CLASS_CACHE_PREFIX;
 import static org.hibernate.cfg.AvailableSettings.COLLECTION_CACHE_PREFIX;
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,7 +36,6 @@ import org.hibernate.boot.MetadataBuilder;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.archive.scan.internal.StandardScanOptions;
 import org.hibernate.boot.archive.scan.spi.Scanner;
-import org.hibernate.boot.beanvalidation.BeanValidationIntegrator;
 import org.hibernate.boot.internal.MetadataImpl;
 import org.hibernate.boot.model.process.spi.ManagedResources;
 import org.hibernate.boot.model.process.spi.MetadataBuildingProcess;
@@ -45,11 +43,9 @@ import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.spi.MetadataBuilderContributor;
 import org.hibernate.boot.spi.MetadataBuilderImplementor;
-import org.hibernate.cache.internal.CollectionCacheInvalidator;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.jdbc.dialect.spi.DialectFactory;
-import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.internal.EntityManagerMessageLogger;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.jpa.boot.internal.StandardJpaScanEnvironmentImpl;
@@ -64,19 +60,21 @@ import org.hibernate.resource.transaction.backend.jta.internal.JtaTransactionCoo
 import org.hibernate.service.Service;
 import org.hibernate.service.internal.AbstractServiceRegistryImpl;
 import org.hibernate.service.internal.ProvidedService;
-import org.infinispan.quarkus.hibernate.cache.QuarkusInfinispanRegionFactory;
 
+import io.quarkus.deployment.Capabilities;
+import io.quarkus.deployment.Capability;
+import io.quarkus.hibernate.orm.deployment.ClassNames;
+import io.quarkus.hibernate.orm.deployment.PersistenceUnitDescriptorBuildItem;
+import io.quarkus.hibernate.orm.deployment.boot.xml.QuarkusXmlMapping;
 import io.quarkus.hibernate.orm.runtime.BuildTimeSettings;
 import io.quarkus.hibernate.orm.runtime.IntegrationSettings;
-import io.quarkus.hibernate.orm.runtime.boot.xml.RecordableXmlMapping;
+import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDescriptor;
+import io.quarkus.hibernate.orm.runtime.customized.FormatMapperKind;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationStaticDescriptor;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationStaticInitListener;
 import io.quarkus.hibernate.orm.runtime.migration.MultiTenancyStrategy;
-import io.quarkus.hibernate.orm.runtime.proxies.PreGeneratedProxies;
-import io.quarkus.hibernate.orm.runtime.proxies.ProxyDefinitions;
+import io.quarkus.hibernate.orm.runtime.recording.BuildTimeRecordedState;
 import io.quarkus.hibernate.orm.runtime.recording.PrevalidatedQuarkusMetadata;
-import io.quarkus.hibernate.orm.runtime.recording.RecordableBootstrap;
-import io.quarkus.hibernate.orm.runtime.recording.RecordedState;
 import io.quarkus.hibernate.orm.runtime.service.QuarkusStaticInitDialectFactory;
 import io.quarkus.hibernate.orm.runtime.tenant.HibernateMultiTenantConnectionProvider;
 
@@ -100,28 +98,27 @@ public class FastBootMetadataBuilder {
 
     private static final EntityManagerMessageLogger LOG = messageLogger(FastBootMetadataBuilder.class);
 
-    private final PersistenceUnitDescriptor persistenceUnit;
+    private final Capabilities capabilities;
+    private final QuarkusPersistenceUnitDescriptor persistenceUnit;
     private final BuildTimeSettings buildTimeSettings;
     private final StandardServiceRegistry standardServiceRegistry;
     private final ManagedResources managedResources;
     private final MetadataBuilderImplementor metamodelBuilder;
-    private final Collection<Class<? extends Integrator>> additionalIntegrators;
     private final Collection<ProvidedService<?>> providedServices;
-    private final PreGeneratedProxies preGeneratedProxies;
     private final MultiTenancyStrategy multiTenancyStrategy;
     private final boolean isReactive;
     private final boolean fromPersistenceXml;
     private final List<HibernateOrmIntegrationStaticDescriptor> integrationStaticDescriptors;
 
     @SuppressWarnings("unchecked")
-    public FastBootMetadataBuilder(final QuarkusPersistenceUnitDefinition puDefinition, Scanner scanner,
-            Collection<Class<? extends Integrator>> additionalIntegrators, PreGeneratedProxies preGeneratedProxies) {
-        this.persistenceUnit = puDefinition.getPersistenceUnitDescriptor();
-        this.isReactive = puDefinition.isReactive();
-        this.fromPersistenceXml = puDefinition.isFromPersistenceXml();
-        this.additionalIntegrators = additionalIntegrators;
-        this.preGeneratedProxies = preGeneratedProxies;
-        this.integrationStaticDescriptors = puDefinition.getIntegrationStaticDescriptors();
+    public FastBootMetadataBuilder(Capabilities capabilities, PersistenceUnitDescriptorBuildItem pu,
+            Scanner scanner,
+            List<HibernateOrmIntegrationStaticDescriptor> integrationStaticDescriptors) {
+        this.capabilities = capabilities;
+        this.persistenceUnit = pu.getDescriptor();
+        this.isReactive = pu.isReactive();
+        this.fromPersistenceXml = pu.isFromPersistenceXml();
+        this.integrationStaticDescriptors = integrationStaticDescriptors;
 
         // Copying semantics from: new EntityManagerFactoryBuilderImpl( unit,
         // integration, instance );
@@ -129,12 +126,12 @@ public class FastBootMetadataBuilder {
 
         LogHelper.logPersistenceUnitInformation(persistenceUnit);
 
-        final RecordableBootstrap ssrBuilder = RecordableBootstrapFactory.createRecordableBootstrapBuilder(puDefinition);
+        final RecordableBootstrap ssrBuilder = RecordableBootstrapFactory.createRecordableBootstrapBuilder(pu);
 
         // Should be set before calling mergeSettings()
-        this.multiTenancyStrategy = puDefinition.getConfig().getMultiTenancyStrategy();
-        final MergedSettings mergedSettings = mergeSettings(puDefinition);
-        this.buildTimeSettings = createBuildTimeSettings(puDefinition, mergedSettings.getConfigurationValues());
+        this.multiTenancyStrategy = pu.getConfig().getMultiTenancyStrategy();
+        final MergedSettings mergedSettings = mergeSettings(pu);
+        this.buildTimeSettings = createBuildTimeSettings(pu, mergedSettings.getConfigurationValues());
 
         // Build the "standard" service registry
         ssrBuilder.applySettings(buildTimeSettings.getAllSettings());
@@ -170,7 +167,7 @@ public class FastBootMetadataBuilder {
         // XML mappings, however, cannot be contributed through the scanner,
         // which only allows specifying mappings as files/resources,
         // and we really don't want any XML parsing here...
-        for (RecordableXmlMapping mapping : puDefinition.getXmlMappings()) {
+        for (QuarkusXmlMapping mapping : pu.getXmlMappings()) {
             metadataSources.addXmlBinding(mapping.toHibernateOrmBinding());
         }
 
@@ -197,9 +194,9 @@ public class FastBootMetadataBuilder {
 
     }
 
-    private BuildTimeSettings createBuildTimeSettings(QuarkusPersistenceUnitDefinition puDefinition,
+    private BuildTimeSettings createBuildTimeSettings(PersistenceUnitDescriptorBuildItem pu,
             Map<String, Object> quarkusConfigSettings) {
-        Map<String, String> quarkusConfigUnsupportedProperties = puDefinition.getConfig()
+        Map<String, String> quarkusConfigUnsupportedProperties = pu.getConfig()
                 .getQuarkusConfigUnsupportedProperties();
         Map<String, Object> allSettings = new HashMap<>(quarkusConfigSettings);
 
@@ -208,9 +205,9 @@ public class FastBootMetadataBuilder {
         // (see io.quarkus.hibernate.orm.runtime.FastBootHibernatePersistenceProvider.buildRuntimeSettings)
         quarkusConfigUnsupportedProperties.forEach(allSettings::putIfAbsent);
 
-        var databaseOrmCompatibilityVersion = puDefinition.getConfig().getDatabaseOrmCompatibilityVersion();
+        var databaseOrmCompatibilityVersion = pu.getConfig().getDatabaseOrmCompatibilityVersion();
         Map<String, String> appliedDatabaseOrmCompatibilitySettings = new HashMap<>();
-        for (Map.Entry<String, String> entry : databaseOrmCompatibilityVersion.settings(puDefinition.getConfig().getDbKind())
+        for (Map.Entry<String, String> entry : databaseOrmCompatibilityVersion.settings(pu.getConfig().getDbKind())
                 .entrySet()) {
             // Not using putIfAbsent() because that would be ambiguous in case of null values
             if (!allSettings.containsKey(entry.getKey())) {
@@ -223,7 +220,7 @@ public class FastBootMetadataBuilder {
         // so that we can more easily differentiate between
         // properties coming from Quarkus and "unsupported" properties
         // on startup (see io.quarkus.hibernate.orm.runtime.FastBootHibernatePersistenceProvider.buildRuntimeSettings)
-        return new BuildTimeSettings(puDefinition.getConfig(), quarkusConfigSettings,
+        return new BuildTimeSettings(pu.getConfig(), quarkusConfigSettings,
                 appliedDatabaseOrmCompatibilitySettings, allSettings);
     }
 
@@ -233,17 +230,17 @@ public class FastBootMetadataBuilder {
      * java.util.Map, org.hibernate.boot.registry.StandardServiceRegistryBuilder)
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private MergedSettings mergeSettings(QuarkusPersistenceUnitDefinition puDefinition) {
-        PersistenceUnitDescriptor persistenceUnit = puDefinition.getPersistenceUnitDescriptor();
+    private MergedSettings mergeSettings(PersistenceUnitDescriptorBuildItem pu) {
+        PersistenceUnitDescriptor puDescriptor = pu.getDescriptor();
         final MergedSettings mergedSettings = new MergedSettings();
         final Map cfg = mergedSettings.configurationValues;
 
         // first, apply persistence.xml-defined settings
-        if (persistenceUnit.getProperties() != null) {
-            cfg.putAll(persistenceUnit.getProperties());
+        if (puDescriptor.getProperties() != null) {
+            cfg.putAll(puDescriptor.getProperties());
         }
 
-        cfg.put(PERSISTENCE_UNIT_NAME, persistenceUnit.getName());
+        cfg.put(PERSISTENCE_UNIT_NAME, puDescriptor.getName());
 
         if (multiTenancyStrategy != null && multiTenancyStrategy != MultiTenancyStrategy.NONE
                 && multiTenancyStrategy != MultiTenancyStrategy.DISCRIMINATOR) {
@@ -254,10 +251,10 @@ public class FastBootMetadataBuilder {
             // (metadata generated for a single-tenant application but runtime using multi-tenancy...).
             // Nothing is expected to actually retrieve a connection from the provider until runtime init, though.
             cfg.put(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER,
-                    new HibernateMultiTenantConnectionProvider(puDefinition.getName()));
+                    new HibernateMultiTenantConnectionProvider(puDescriptor.getName()));
         }
 
-        applyTransactionProperties(persistenceUnit, cfg);
+        applyTransactionProperties(puDescriptor, cfg);
         applyJdbcConnectionProperties(cfg);
 
         // unsupported FLUSH_BEFORE_COMPLETION
@@ -318,14 +315,14 @@ public class FastBootMetadataBuilder {
                 .filter(HibernateOrmIntegrationStaticDescriptor::isXmlMappingRequired)
                 .map(HibernateOrmIntegrationStaticDescriptor::getIntegrationName).collect(Collectors.toList());
         Optional<Boolean> xmlMappingEnabledOptional = readOptionalBooleanConfigurationValue(cfg, XML_MAPPING_ENABLED);
-        if (!puDefinition.getXmlMappings().isEmpty() || !integrationsRequiringXmlMapping.isEmpty()) {
+        if (!pu.getXmlMappings().isEmpty() || !integrationsRequiringXmlMapping.isEmpty()) {
             if (xmlMappingEnabledOptional.isPresent() && !xmlMappingEnabledOptional.get()) {
                 // Explicitly disabled even though we need it...
                 LOG.warnf("XML mapping is necessary in persistence unit '%s':"
                         + " %d XML mapping files are used, and %d extensions require XML mapping (%s)."
                         + " Setting '%s' to false.",
-                        persistenceUnit.getName(), XML_MAPPING_ENABLED,
-                        puDefinition.getXmlMappings().size(), integrationsRequiringXmlMapping.size(),
+                        puDescriptor.getName(), XML_MAPPING_ENABLED,
+                        pu.getXmlMappings().size(), integrationsRequiringXmlMapping.size(),
                         integrationsRequiringXmlMapping);
             }
             cfg.put(XML_MAPPING_ENABLED, "true");
@@ -334,7 +331,7 @@ public class FastBootMetadataBuilder {
                 // Explicitly enabled even though we do not need it...
                 LOG.warnf("XML mapping is not necessary in persistence unit '%s'."
                         + " Setting '%s' to false.",
-                        persistenceUnit.getName(), XML_MAPPING_ENABLED);
+                        puDescriptor.getName(), XML_MAPPING_ENABLED);
             }
             cfg.put(XML_MAPPING_ENABLED, "false");
         }
@@ -385,7 +382,7 @@ public class FastBootMetadataBuilder {
         }
 
         cfg.put(org.hibernate.cfg.AvailableSettings.CACHE_REGION_FACTORY,
-                QuarkusInfinispanRegionFactory.class.getName());
+                ClassNames.QUARKUS_INFINISPAN_REGION_FACTORY.toString());
 
         for (HibernateOrmIntegrationStaticDescriptor descriptor : integrationStaticDescriptors) {
             Optional<HibernateOrmIntegrationStaticInitListener> listenerOptional = descriptor.getInitListener();
@@ -395,18 +392,20 @@ public class FastBootMetadataBuilder {
         }
 
         // If there's any mapping lib that we can work with available we'll set the default mapper:
-        if (puDefinition.getJsonMapperCreator().isPresent()) {
-            cfg.put(AvailableSettings.JSON_FORMAT_MAPPER, puDefinition.getJsonMapperCreator().get().create());
+        var defaultJsonFormatMapper = defaultJsonFormatMapper(capabilities);
+        if (defaultJsonFormatMapper.isPresent()) {
+            cfg.put(AvailableSettings.JSON_FORMAT_MAPPER, defaultJsonFormatMapper.get().getFormatMapperClass());
         }
         // If there's any mapping lib that we can work with available we'll set the default mapper:
-        if (puDefinition.getXmlMapperCreator().isPresent()) {
-            cfg.put(AvailableSettings.XML_FORMAT_MAPPER, puDefinition.getXmlMapperCreator().get().create());
+        var defaultXmlFormatMapper = defaultXmlFormatMapper(capabilities);
+        if (defaultXmlFormatMapper.isPresent()) {
+            cfg.put(AvailableSettings.XML_FORMAT_MAPPER, defaultXmlFormatMapper.get().getFormatMapperClass());
         }
 
         return mergedSettings;
     }
 
-    public RecordedState build() {
+    public BuildTimeRecordedState build() {
         MetadataImpl fullMeta = (MetadataImpl) MetadataBuildingProcess.complete(
                 managedResources,
                 metamodelBuilder.getBootstrapContext(),
@@ -427,9 +426,8 @@ public class FastBootMetadataBuilder {
         PrevalidatedQuarkusMetadata storeableMetadata = trimBootstrapMetadata(fullMeta);
         //Make sure that the service is destroyed after the metadata has been validated and trimmed, as validation needs to use it.
         destroyServiceRegistry();
-        ProxyDefinitions proxyClassDefinitions = ProxyDefinitions.createFromMetadata(storeableMetadata, preGeneratedProxies);
-        return new RecordedState(dialect, storeableMetadata, buildTimeSettings, getIntegrators(),
-                providedServices, integrationSettingsBuilder.build(), proxyClassDefinitions, multiTenancyStrategy,
+        return new BuildTimeRecordedState(persistenceUnit, dialect, storeableMetadata, buildTimeSettings,
+                providedServices, integrationSettingsBuilder.build(), multiTenancyStrategy,
                 isReactive, fromPersistenceXml);
     }
 
@@ -472,22 +470,6 @@ public class FastBootMetadataBuilder {
         DialectFactory service = standardServiceRegistry.getService(DialectFactory.class);
         QuarkusStaticInitDialectFactory casted = (QuarkusStaticInitDialectFactory) service;
         return casted.getDialect();
-    }
-
-    private Collection<Integrator> getIntegrators() {
-        LinkedHashSet<Integrator> integrators = new LinkedHashSet<>();
-        integrators.add(new BeanValidationIntegrator());
-        integrators.add(new CollectionCacheInvalidator());
-
-        for (Class<? extends Integrator> integratorClass : additionalIntegrators) {
-            try {
-                integrators.add(integratorClass.getConstructor().newInstance());
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Unable to instantiate integrator " + integratorClass, e);
-            }
-        }
-
-        return integrators;
     }
 
     @SuppressWarnings("rawtypes")
@@ -694,4 +676,20 @@ public class FastBootMetadataBuilder {
         return instance;
     }
 
+    private Optional<FormatMapperKind> defaultJsonFormatMapper(Capabilities capabilities) {
+        if (capabilities.isPresent(Capability.JACKSON)) {
+            return Optional.of(FormatMapperKind.JACKSON);
+        }
+        if (capabilities.isPresent(Capability.JSONB)) {
+            return Optional.of(FormatMapperKind.JSONB);
+        }
+        return Optional.empty();
+    }
+
+    private Optional<FormatMapperKind> defaultXmlFormatMapper(Capabilities capabilities) {
+        if (capabilities.isPresent(Capability.JAXB)) {
+            return Optional.of(FormatMapperKind.JAXB);
+        }
+        return Optional.empty();
+    }
 }

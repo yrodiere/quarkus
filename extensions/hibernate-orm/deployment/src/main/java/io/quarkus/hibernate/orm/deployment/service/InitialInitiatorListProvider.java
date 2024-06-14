@@ -1,8 +1,10 @@
-package io.quarkus.hibernate.orm.runtime.service;
+package io.quarkus.hibernate.orm.deployment.service;
 
 import java.util.List;
 
 import org.hibernate.boot.registry.StandardServiceInitiator;
+
+import io.quarkus.hibernate.orm.deployment.boot.RecordableBootstrap;
 
 /**
  * The initial list of StandardServiceInitiator instances is a constant
@@ -12,8 +14,8 @@ import org.hibernate.boot.registry.StandardServiceInitiator;
  * two constants we need a shared contract for producing the list.
  * This is such contract:
  *
- * @see io.quarkus.hibernate.orm.runtime.recording.RecordableBootstrap#RecordableBootstrap(org.hibernate.boot.registry.BootstrapServiceRegistry,
- *      io.quarkus.hibernate.orm.runtime.service.InitialInitiatorListProvider)
+ * @see RecordableBootstrap#RecordableBootstrap(org.hibernate.boot.registry.BootstrapServiceRegistry,
+ *      InitialInitiatorListProvider)
  */
 public interface InitialInitiatorListProvider {
 

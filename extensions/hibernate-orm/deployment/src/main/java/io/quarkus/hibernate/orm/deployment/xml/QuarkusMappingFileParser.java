@@ -19,7 +19,7 @@ import org.hibernate.boot.spi.XmlMappingBinderAccess;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.integrator.spi.IntegratorService;
 
-import io.quarkus.hibernate.orm.runtime.boot.xml.RecordableXmlMapping;
+import io.quarkus.hibernate.orm.deployment.boot.xml.QuarkusXmlMapping;
 import io.quarkus.hibernate.orm.runtime.customized.QuarkusStrategySelectorBuilder;
 import io.quarkus.hibernate.orm.runtime.service.FlatClassLoaderService;
 
@@ -53,7 +53,7 @@ public final class QuarkusMappingFileParser implements AutoCloseable {
      * @param mappingFilePath The path of the mapping file in the classpath.
      * @return A summary of the parsed mapping file, or {@link Optional#empty()} if it was not found.
      */
-    public Optional<RecordableXmlMapping> parse(String persistenceUnitName, URL persistenceUnitRootUrl,
+    public Optional<QuarkusXmlMapping> parse(String persistenceUnitName, URL persistenceUnitRootUrl,
             String mappingFilePath) {
         URL url = locateMappingFile(persistenceUnitName, persistenceUnitRootUrl, mappingFilePath);
 
@@ -64,7 +64,7 @@ public final class QuarkusMappingFileParser implements AutoCloseable {
 
         try (InputStream stream = url.openStream()) {
             Binding<? extends JaxbBindableMappingDescriptor> binding = binderAccess.bind(stream);
-            return Optional.of(RecordableXmlMapping.create(binding));
+            return Optional.of(QuarkusXmlMapping.create(binding));
         } catch (RuntimeException | IOException e) {
             throw new IllegalStateException(
                     "Error reading mapping file '" + mappingFilePath + "' ('" + url + "'): " + e.getMessage(), e);

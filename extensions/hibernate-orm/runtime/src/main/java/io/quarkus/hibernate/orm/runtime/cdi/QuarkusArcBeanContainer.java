@@ -1,6 +1,5 @@
 package io.quarkus.hibernate.orm.runtime.cdi;
 
-import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -38,12 +37,4 @@ public class QuarkusArcBeanContainer extends AbstractCdiBeanContainer {
         return bean;
     }
 
-    /**
-     * This will happen after Hibernate ORM is stopped;
-     * see io.quarkus.hibernate.orm.runtime.JPAConfig#destroy(java.lang.Object).
-     */
-    @PreDestroy
-    public void destroy() {
-        stop();
-    }
 }

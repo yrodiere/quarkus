@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.runtime.boot.scan;
+package io.quarkus.hibernate.orm.deployment.boot.scan;
 
 import static io.quarkus.commons.classloading.ClassloadHelper.fromClassNameToResourceName;
 

@@ -15,7 +15,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
-import org.hibernate.boot.archive.scan.spi.Scanner;
 import org.hibernate.engine.spi.SessionLazyDelegator;
 import org.hibernate.integrator.spi.Integrator;
 import org.jboss.logging.Logger;
@@ -23,10 +22,10 @@ import org.jboss.logging.Logger;
 import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.arc.runtime.BeanContainer;
 import io.quarkus.arc.runtime.BeanContainerListener;
-import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDefinition;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationRuntimeDescriptor;
 import io.quarkus.hibernate.orm.runtime.migration.MultiTenancyStrategy;
 import io.quarkus.hibernate.orm.runtime.proxies.PreGeneratedProxies;
+import io.quarkus.hibernate.orm.runtime.recording.BuildTimeRecordedState;
 import io.quarkus.hibernate.orm.runtime.schema.SchemaManagementIntegrator;
 import io.quarkus.hibernate.orm.runtime.tenant.DataSourceTenantConnectionResolver;
 import io.quarkus.runtime.annotations.Recorder;
@@ -37,12 +36,12 @@ import io.quarkus.runtime.annotations.Recorder;
 @Recorder
 public class HibernateOrmRecorder {
 
-    private final PreGeneratedProxies proxyDefinitions;
+    private final PreGeneratedProxies preGeneratedProxies;
     private final List<String> entities = new ArrayList<>();
 
     @Inject
-    public HibernateOrmRecorder(PreGeneratedProxies proxyDefinitions) {
-        this.proxyDefinitions = proxyDefinitions;
+    public HibernateOrmRecorder(PreGeneratedProxies preGeneratedProxies) {
+        this.preGeneratedProxies = preGeneratedProxies;
     }
 
     public void enlistPersistenceUnit(Set<String> entityClassNames) {
@@ -64,19 +63,21 @@ public class HibernateOrmRecorder {
         PersistenceProviderSetup.registerRuntimePersistenceProvider(hibernateOrmRuntimeConfig, integrationRuntimeDescriptors);
     }
 
-    public BeanContainerListener initMetadata(List<QuarkusPersistenceUnitDefinition> parsedPersistenceXmlDescriptors,
-            Scanner scanner, Collection<Class<? extends Integrator>> additionalIntegrators) {
+    public BeanContainerListener jpaStaticInitialization(Map<String, BuildTimeRecordedState> buildTimeRecordedStates,
+            Collection<Class<? extends Integrator>> additionalIntegrators) {
         SchemaManagementIntegrator.clearDsMap();
-        for (QuarkusPersistenceUnitDefinition i : parsedPersistenceXmlDescriptors) {
-            if (i.getConfig().getDataSource().isPresent()) {
-                SchemaManagementIntegrator.mapDatasource(i.getConfig().getDataSource().get(), i.getName());
+        for (Map.Entry<String, BuildTimeRecordedState> entry : buildTimeRecordedStates.entrySet()) {
+            var puName = entry.getKey();
+            var datasource = entry.getValue().getSettings().getSource().getDataSource();
+            if (datasource.isPresent()) {
+                SchemaManagementIntegrator.mapDatasource(datasource.get(), puName);
             }
         }
         return new BeanContainerListener() {
             @Override
             public void created(BeanContainer beanContainer) {
-                PersistenceUnitsHolder.initializeJpa(parsedPersistenceXmlDescriptors, scanner, additionalIntegrators,
-                        proxyDefinitions);
+                PersistenceUnitsHolder.jpaStaticInitialization(buildTimeRecordedStates,
+                        additionalIntegrators, preGeneratedProxies);
             }
         };
     }

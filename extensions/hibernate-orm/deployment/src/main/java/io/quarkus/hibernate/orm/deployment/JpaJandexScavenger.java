@@ -37,8 +37,8 @@ import io.quarkus.builder.BuildException;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.builditem.HotDeploymentWatchedFileBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.hibernate.orm.deployment.boot.xml.QuarkusXmlMapping;
 import io.quarkus.hibernate.orm.deployment.xml.QuarkusMappingFileParser;
-import io.quarkus.hibernate.orm.runtime.boot.xml.RecordableXmlMapping;
 import io.quarkus.runtime.configuration.ConfigurationException;
 
 /**
@@ -153,7 +153,7 @@ public final class JpaJandexScavenger {
             for (String mappingFileName : mappingFileNames) {
                 hotDeploymentWatchedFiles.produce(new HotDeploymentWatchedFileBuildItem(mappingFileName));
 
-                Optional<RecordableXmlMapping> mappingOptional = parser.parse(persistenceUnitContribution.persistenceUnitName,
+                Optional<QuarkusXmlMapping> mappingOptional = parser.parse(persistenceUnitContribution.persistenceUnitName,
                         persistenceUnitContribution.persistenceUnitRootURL, mappingFileName);
                 if (!mappingOptional.isPresent()) {
                     if (persistenceUnitContribution.explicitlyListedMappingFiles.contains(mappingFileName)) {
@@ -165,7 +165,7 @@ public final class JpaJandexScavenger {
                     }
                     continue;
                 }
-                RecordableXmlMapping mapping = mappingOptional.get();
+                QuarkusXmlMapping mapping = mappingOptional.get();
                 if (mapping.getOrmXmlRoot() != null) {
                     enlistOrmXmlMapping(collector, mapping.getOrmXmlRoot());
                 }
@@ -582,6 +582,6 @@ public final class JpaJandexScavenger {
         final Set<String> enumTypes = new HashSet<>();
         final Set<String> javaTypes = new HashSet<>();
         final Set<DotName> unindexedClasses = new HashSet<>();
-        final Map<String, List<RecordableXmlMapping>> xmlMappingsByPU = new HashMap<>();
+        final Map<String, List<QuarkusXmlMapping>> xmlMappingsByPU = new HashMap<>();
     }
 }

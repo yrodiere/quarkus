@@ -6,14 +6,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.hibernate.boot.archive.scan.spi.Scanner;
 import org.hibernate.integrator.spi.Integrator;
 
-import io.quarkus.hibernate.orm.runtime.boot.FastBootMetadataBuilder;
-import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDefinition;
 import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDescriptor;
 import io.quarkus.hibernate.orm.runtime.proxies.PreGeneratedProxies;
-import io.quarkus.hibernate.orm.runtime.recording.RecordedState;
+import io.quarkus.hibernate.orm.runtime.recording.BuildTimeRecordedState;
+import io.quarkus.hibernate.orm.runtime.recording.StaticInitRecordedState;
 
 public final class PersistenceUnitsHolder {
 
@@ -25,22 +23,18 @@ public final class PersistenceUnitsHolder {
     /**
      * Initialize JPA for use in Quarkus. In a native image. This must be called
      * from within a static init method.
-     *
-     * The scanner may be null to use the default scanner, or a custom scanner can be
-     * used to stop Hibernate scanning. It is expected that the scanner will be
-     * provided by Quarkus via its hold of Jandex info.
-     *
-     * @param puDefinitions
-     * @param scanner
      */
-    static void initializeJpa(List<QuarkusPersistenceUnitDefinition> puDefinitions,
-            Scanner scanner, Collection<Class<? extends Integrator>> additionalIntegrators,
+    static void jpaStaticInitialization(Map<String, BuildTimeRecordedState> buildTimeRecordedStates,
+            Collection<Class<? extends Integrator>> additionalIntegrators,
             PreGeneratedProxies preGeneratedProxies) {
-        final List<QuarkusPersistenceUnitDescriptor> units = convertPersistenceUnits(puDefinitions);
-        final Map<String, RecordedState> metadata = constructMetadataAdvance(puDefinitions, scanner, additionalIntegrators,
+        final List<QuarkusPersistenceUnitDescriptor> puDescriptors = buildTimeRecordedStates.values().stream()
+                .map(BuildTimeRecordedState::getDescriptor)
+                .collect(Collectors.toList());
+        final Map<String, StaticInitRecordedState> metadata = constructMetadataAdvance(buildTimeRecordedStates,
+                additionalIntegrators,
                 preGeneratedProxies);
 
-        persistenceUnits = new PersistenceUnits(units, metadata);
+        persistenceUnits = new PersistenceUnits(puDescriptors, metadata);
     }
 
     public static List<QuarkusPersistenceUnitDescriptor> getPersistenceUnitDescriptors() {
@@ -48,32 +42,24 @@ public final class PersistenceUnitsHolder {
         return persistenceUnits.units;
     }
 
-    public static RecordedState popRecordedState(String persistenceUnitName) {
+    public static StaticInitRecordedState popRecordedState(String persistenceUnitName) {
         checkJPAInitialization();
-        Object key = persistenceUnitName;
-        if (persistenceUnitName == null) {
-            key = NO_NAME_TOKEN;
-        }
-        return persistenceUnits.recordedStates.remove(key);
+        return persistenceUnits.recordedStates.remove(persistenceUnitName);
     }
 
-    private static List<QuarkusPersistenceUnitDescriptor> convertPersistenceUnits(
-            final List<QuarkusPersistenceUnitDefinition> parsedPersistenceXmlDescriptors) {
-        return parsedPersistenceXmlDescriptors.stream().map(QuarkusPersistenceUnitDefinition::getPersistenceUnitDescriptor)
-                .collect(Collectors.toList());
-    }
-
-    private static Map<String, RecordedState> constructMetadataAdvance(
-            final List<QuarkusPersistenceUnitDefinition> parsedPersistenceXmlDescriptors, Scanner scanner,
+    private static Map<String, StaticInitRecordedState> constructMetadataAdvance(
+            final Map<String, BuildTimeRecordedState> buildTimeStates,
             Collection<Class<? extends Integrator>> additionalIntegrators,
             PreGeneratedProxies proxyClassDefinitions) {
-        Map<String, RecordedState> recordedStates = new HashMap<>();
+        Map<String, StaticInitRecordedState> recordedStates = new HashMap<>();
 
-        for (QuarkusPersistenceUnitDefinition unit : parsedPersistenceXmlDescriptors) {
-            RecordedState m = createMetadata(unit, scanner, additionalIntegrators, proxyClassDefinitions);
-            Object previous = recordedStates.put(unitName(unit), m);
+        for (var entry : buildTimeStates.entrySet()) {
+            var puName = entry.getKey();
+            var buildTimeState = entry.getValue();
+            var staticInitState = StaticInitRecordedState.create(buildTimeState, additionalIntegrators, proxyClassDefinitions);
+            Object previous = recordedStates.put(puName, staticInitState);
             if (previous != null) {
-                throw new IllegalStateException("Duplicate persistence unit name: " + unit.getName());
+                throw new IllegalStateException("Duplicate persistence unit name: " + puName);
             }
         }
 
@@ -86,29 +72,14 @@ public final class PersistenceUnitsHolder {
         }
     }
 
-    private static String unitName(QuarkusPersistenceUnitDefinition unit) {
-        String name = unit.getName();
-        if (name == null) {
-            return NO_NAME_TOKEN;
-        }
-        return name;
-    }
-
-    public static RecordedState createMetadata(QuarkusPersistenceUnitDefinition unit, Scanner scanner,
-            Collection<Class<? extends Integrator>> additionalIntegrators, PreGeneratedProxies proxyDefinitions) {
-        FastBootMetadataBuilder fastBootMetadataBuilder = new FastBootMetadataBuilder(unit, scanner, additionalIntegrators,
-                proxyDefinitions);
-        return fastBootMetadataBuilder.build();
-    }
-
     private static class PersistenceUnits {
 
         private final List<QuarkusPersistenceUnitDescriptor> units;
 
-        private final Map<String, RecordedState> recordedStates;
+        private final Map<String, StaticInitRecordedState> recordedStates;
 
         public PersistenceUnits(final List<QuarkusPersistenceUnitDescriptor> units,
-                final Map<String, RecordedState> recordedStates) {
+                final Map<String, StaticInitRecordedState> recordedStates) {
             this.units = units;
             this.recordedStates = recordedStates;
         }

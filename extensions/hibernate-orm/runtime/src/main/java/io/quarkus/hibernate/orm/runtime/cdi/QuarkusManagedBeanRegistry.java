@@ -6,22 +6,17 @@ import org.hibernate.resource.beans.internal.FallbackBeanInstanceProducer;
 import org.hibernate.resource.beans.spi.BeanInstanceProducer;
 import org.hibernate.resource.beans.spi.ManagedBean;
 import org.hibernate.resource.beans.spi.ManagedBeanRegistry;
+import org.hibernate.service.spi.Stoppable;
 
 import io.quarkus.arc.Arc;
 
 /**
- * A replacement for ManagedBeanRegistryImpl that:
- * <ul>
- * <li>forces the use of QuarkusManagedBeanRegistry,
- * which works with Arc and respects configured scopes when instantiating CDI beans.</li>
- * <li>is not stoppable and leaves the release of beans to {@link QuarkusArcBeanContainer},
- * so that the bean container and its beans can be reused between static init and runtime init,
- * even though we stop Hibernate ORM services after the end of static init.</li>
- * </ul>
+ * A replacement for ManagedBeanRegistryImpl that forces the use of QuarkusManagedBeanRegistry,
+ * which works with Arc and respects configured scopes when instantiating CDI beans.
  *
  * @see QuarkusArcBeanContainer
  */
-public class QuarkusManagedBeanRegistry implements ManagedBeanRegistry {
+public class QuarkusManagedBeanRegistry implements ManagedBeanRegistry, Stoppable {
 
     private final QuarkusArcBeanContainer beanContainer;
 
@@ -57,6 +52,13 @@ public class QuarkusManagedBeanRegistry implements ManagedBeanRegistry {
         return new ContainedBeanManagedBeanAdapter<>(beanContract,
                 beanContainer.getBean(beanName, beanContract, QuarkusBeanContainerLifecycleOptions.INSTANCE,
                         fallbackBeanInstanceProducer));
+    }
+
+    @Override
+    public void stop() {
+        if (beanContainer != null) {
+            beanContainer.stop();
+        }
     }
 
     private static class ContainedBeanManagedBeanAdapter<B> implements ManagedBean<B> {

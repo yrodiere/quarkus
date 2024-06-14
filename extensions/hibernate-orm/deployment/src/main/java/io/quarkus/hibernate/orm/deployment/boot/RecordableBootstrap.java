@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.runtime.recording;
+package io.quarkus.hibernate.orm.deployment.boot;
 
 import java.io.File;
 import java.net.URL;
@@ -20,7 +20,7 @@ import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.internal.ProvidedService;
 import org.hibernate.service.spi.ServiceContributor;
 
-import io.quarkus.hibernate.orm.runtime.service.InitialInitiatorListProvider;
+import io.quarkus.hibernate.orm.deployment.service.InitialInitiatorListProvider;
 
 /**
  * Has to extend StandardServiceRegistryBuilder even if we don't want: needs to

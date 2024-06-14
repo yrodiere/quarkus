@@ -37,7 +37,7 @@ import io.quarkus.hibernate.orm.runtime.config.DatabaseOrmCompatibilityVersion;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationRuntimeDescriptor;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationRuntimeInitListener;
 import io.quarkus.hibernate.orm.runtime.recording.PrevalidatedQuarkusMetadata;
-import io.quarkus.hibernate.orm.runtime.recording.RecordedState;
+import io.quarkus.hibernate.orm.runtime.recording.StaticInitRecordedState;
 
 /**
  * This can not inherit from HibernatePersistenceProvider as that would force
@@ -174,7 +174,7 @@ public final class FastBootHibernatePersistenceProvider implements PersistencePr
                 continue;
             }
 
-            RecordedState recordedState = PersistenceUnitsHolder.popRecordedState(persistenceUnitName);
+            StaticInitRecordedState recordedState = PersistenceUnitsHolder.popRecordedState(persistenceUnitName);
 
             if (recordedState.isReactive()) {
                 throw new IllegalStateException(
@@ -206,7 +206,7 @@ public final class FastBootHibernatePersistenceProvider implements PersistencePr
         return null;
     }
 
-    private RuntimeSettings buildRuntimeSettings(String persistenceUnitName, RecordedState recordedState,
+    private RuntimeSettings buildRuntimeSettings(String persistenceUnitName, StaticInitRecordedState recordedState,
             HibernateOrmRuntimeConfigPersistenceUnit persistenceUnitConfig) {
         final BuildTimeSettings buildTimeSettings = recordedState.getBuildTimeSettings();
         final IntegrationSettings integrationSettings = recordedState.getIntegrationSettings();
@@ -291,7 +291,8 @@ public final class FastBootHibernatePersistenceProvider implements PersistencePr
         return runtimeSettingsBuilder.build();
     }
 
-    private StandardServiceRegistry rewireMetadataAndExtractServiceRegistry(RuntimeSettings runtimeSettings, RecordedState rs,
+    private StandardServiceRegistry rewireMetadataAndExtractServiceRegistry(RuntimeSettings runtimeSettings,
+            StaticInitRecordedState rs,
             String persistenceUnitName) {
         PreconfiguredServiceRegistryBuilder serviceRegistryBuilder = new PreconfiguredServiceRegistryBuilder(
                 persistenceUnitName, rs);

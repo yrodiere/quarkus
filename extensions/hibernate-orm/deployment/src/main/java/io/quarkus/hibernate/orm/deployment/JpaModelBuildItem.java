@@ -12,7 +12,7 @@ import jakarta.persistence.Entity;
 import org.jboss.jandex.DotName;
 
 import io.quarkus.builder.item.SimpleBuildItem;
-import io.quarkus.hibernate.orm.runtime.boot.xml.RecordableXmlMapping;
+import io.quarkus.hibernate.orm.deployment.boot.xml.QuarkusXmlMapping;
 
 /**
  * Internal model to represent which objects are likely needing enhancement
@@ -25,11 +25,11 @@ public final class JpaModelBuildItem extends SimpleBuildItem {
     private final Set<String> managedClassNames = new TreeSet<>();
     private final Set<DotName> potentialCdiBeanClassNames = new TreeSet<>();
     private final Set<String> allModelClassNames = new TreeSet<>();
-    private final Map<String, List<RecordableXmlMapping>> xmlMappingsByPU = new HashMap<>();
+    private final Map<String, List<QuarkusXmlMapping>> xmlMappingsByPU = new HashMap<>();
 
     public JpaModelBuildItem(Set<String> allModelPackageNames, Set<String> entityClassNames,
             Set<String> managedClassNames, Set<DotName> potentialCdiBeanClassNames,
-            Map<String, List<RecordableXmlMapping>> xmlMappingsByPU) {
+            Map<String, List<QuarkusXmlMapping>> xmlMappingsByPU) {
         this.allModelPackageNames.addAll(allModelPackageNames);
         this.entityClassNames.addAll(entityClassNames);
         this.managedClassNames.addAll(managedClassNames);
@@ -82,7 +82,7 @@ public final class JpaModelBuildItem extends SimpleBuildItem {
     /**
      * @return the list of all XML mappings for the given persistence unit.
      */
-    public List<RecordableXmlMapping> getXmlMappings(String puName) {
+    public List<QuarkusXmlMapping> getXmlMappings(String puName) {
         return xmlMappingsByPU.getOrDefault(puName, Collections.emptyList());
     }
 }

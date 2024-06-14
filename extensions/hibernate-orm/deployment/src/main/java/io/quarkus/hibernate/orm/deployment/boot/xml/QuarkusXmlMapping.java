@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.runtime.boot.xml;
+package io.quarkus.hibernate.orm.deployment.boot.xml;
 
 import org.hibernate.boot.jaxb.Origin;
 import org.hibernate.boot.jaxb.SourceType;
@@ -10,12 +10,11 @@ import org.hibernate.boot.jaxb.spi.JaxbBindableMappingDescriptor;
 import io.quarkus.runtime.annotations.RecordableConstructor;
 
 /**
- * A substitute to Hibernate ORM's "Binding",
- * which is actually a representation of a parsed XML mapping file (orm.xml or hbm.xml).
+ * A holder class for a parsed XML mapping file (orm.xml or hbm.xml).
  * <p>
- * On contrary to Binding, this class can be serialized/deserialized by the BytecodeRecorder.
+ * FIXME: This was mainly useful to serialize/deserialize through the BytecodeRecorder, but we don't need that anymore.
  */
-public class RecordableXmlMapping {
+public class QuarkusXmlMapping {
     // The following two properties are mutually exclusive: exactly one of them is non-null.
     private final JaxbEntityMappingsImpl ormXmlRoot;
     private final JaxbHbmHibernateMapping hbmXmlRoot;
@@ -23,20 +22,20 @@ public class RecordableXmlMapping {
     private final SourceType originType;
     private final String originName;
 
-    public static RecordableXmlMapping create(Binding<? extends JaxbBindableMappingDescriptor> binding) {
+    public static QuarkusXmlMapping create(Binding<? extends JaxbBindableMappingDescriptor> binding) {
         JaxbBindableMappingDescriptor root = binding.getRoot();
         Origin origin = binding.getOrigin();
         if (root instanceof JaxbEntityMappingsImpl) {
-            return new RecordableXmlMapping((JaxbEntityMappingsImpl) root, null, origin.getType(), origin.getName());
+            return new QuarkusXmlMapping((JaxbEntityMappingsImpl) root, null, origin.getType(), origin.getName());
         } else if (root instanceof JaxbHbmHibernateMapping) {
-            return new RecordableXmlMapping(null, (JaxbHbmHibernateMapping) root, origin.getType(), origin.getName());
+            return new QuarkusXmlMapping(null, (JaxbHbmHibernateMapping) root, origin.getType(), origin.getName());
         } else {
             throw new IllegalArgumentException("Unsupported mapping file root (unrecognized type): " + root);
         }
     }
 
     @RecordableConstructor
-    public RecordableXmlMapping(JaxbEntityMappingsImpl ormXmlRoot, JaxbHbmHibernateMapping hbmXmlRoot, SourceType originType,
+    public QuarkusXmlMapping(JaxbEntityMappingsImpl ormXmlRoot, JaxbHbmHibernateMapping hbmXmlRoot, SourceType originType,
             String originName) {
         this.ormXmlRoot = ormXmlRoot;
         this.hbmXmlRoot = hbmXmlRoot;

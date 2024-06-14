@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -32,14 +33,11 @@ import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-import javax.xml.namespace.QName;
-
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Default;
 import jakarta.persistence.SharedCacheMode;
 import jakarta.persistence.ValidationMode;
 import jakarta.persistence.spi.PersistenceUnitTransactionType;
-import jakarta.xml.bind.JAXBElement;
 
 import org.hibernate.boot.archive.scan.spi.ClassDescriptor;
 import org.hibernate.boot.archive.scan.spi.PackageDescriptor;
@@ -110,6 +108,9 @@ import io.quarkus.deployment.util.IoUtil;
 import io.quarkus.deployment.util.ServiceUtil;
 import io.quarkus.hibernate.orm.PersistenceUnit;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmConfigPersistenceUnit.IdentifierQuotingStrategy;
+import io.quarkus.hibernate.orm.deployment.boot.FastBootMetadataBuilder;
+import io.quarkus.hibernate.orm.deployment.boot.scan.QuarkusScanner;
+import io.quarkus.hibernate.orm.deployment.boot.xml.QuarkusXmlMapping;
 import io.quarkus.hibernate.orm.deployment.integration.HibernateOrmIntegrationRuntimeConfiguredBuildItem;
 import io.quarkus.hibernate.orm.deployment.integration.HibernateOrmIntegrationStaticConfiguredBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.AdditionalJpaModelBuildItem;
@@ -117,17 +118,13 @@ import io.quarkus.hibernate.orm.deployment.spi.DatabaseKindDialectBuildItem;
 import io.quarkus.hibernate.orm.runtime.HibernateOrmRecorder;
 import io.quarkus.hibernate.orm.runtime.HibernateOrmRuntimeConfig;
 import io.quarkus.hibernate.orm.runtime.PersistenceUnitUtil;
-import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDefinition;
 import io.quarkus.hibernate.orm.runtime.boot.QuarkusPersistenceUnitDescriptor;
-import io.quarkus.hibernate.orm.runtime.boot.scan.QuarkusScanner;
-import io.quarkus.hibernate.orm.runtime.boot.xml.JAXBElementSubstitution;
-import io.quarkus.hibernate.orm.runtime.boot.xml.QNameSubstitution;
-import io.quarkus.hibernate.orm.runtime.boot.xml.RecordableXmlMapping;
 import io.quarkus.hibernate.orm.runtime.config.DialectVersions;
 import io.quarkus.hibernate.orm.runtime.dev.HibernateOrmDevIntegrator;
 import io.quarkus.hibernate.orm.runtime.integration.HibernateOrmIntegrationStaticDescriptor;
 import io.quarkus.hibernate.orm.runtime.migration.MultiTenancyStrategy;
 import io.quarkus.hibernate.orm.runtime.proxies.PreGeneratedProxies;
+import io.quarkus.hibernate.orm.runtime.recording.BuildTimeRecordedState;
 import io.quarkus.hibernate.orm.runtime.recording.RecordedConfig;
 import io.quarkus.hibernate.orm.runtime.schema.SchemaManagementIntegrator;
 import io.quarkus.hibernate.orm.runtime.service.FlatClassLoaderService;
@@ -540,26 +537,21 @@ public final class HibernateOrmProcessor {
         Map<String, List<HibernateOrmIntegrationStaticDescriptor>> integrationStaticDescriptors = HibernateOrmIntegrationStaticConfiguredBuildItem
                 .collectDescriptors(integrationBuildItems);
 
-        List<QuarkusPersistenceUnitDefinition> finalStagePUDescriptors = new ArrayList<>();
-        for (PersistenceUnitDescriptorBuildItem pud : persistenceUnitDescriptorBuildItems) {
-            finalStagePUDescriptors.add(
-                    pud.asOutputPersistenceUnitDefinition(integrationStaticDescriptors
-                            .getOrDefault(pud.getPersistenceUnitName(), Collections.emptyList())));
-        }
-
-        if (hasXmlMappings(persistenceUnitDescriptorBuildItems)) {
-            //Make it possible to record JAXBElement as bytecode:
-            recorderContext.registerSubstitution(JAXBElement.class,
-                    JAXBElementSubstitution.Serialized.class,
-                    JAXBElementSubstitution.class);
-            recorderContext.registerSubstitution(QName.class,
-                    QNameSubstitution.Serialized.class,
-                    QNameSubstitution.class);
+        Map<String, BuildTimeRecordedState> recordedStates = new LinkedHashMap<>();
+        for (PersistenceUnitDescriptorBuildItem pu : persistenceUnitDescriptorBuildItems) {
+            String puName = pu.getPersistenceUnitName();
+            FastBootMetadataBuilder fastBootMetadataBuilder = new FastBootMetadataBuilder(capabilities, pu, scanner,
+                    integrationStaticDescriptors.getOrDefault(puName, List.of()));
+            var buildTimeState = fastBootMetadataBuilder.build();
+            Object previous = recordedStates.put(puName, buildTimeState);
+            if (previous != null) {
+                throw new IllegalStateException("Duplicate persistence unit name: " + puName);
+            }
         }
 
         beanContainerListener
                 .produce(new BeanContainerListenerBuildItem(
-                        recorder.initMetadata(finalStagePUDescriptors, scanner, integratorClasses)));
+                        recorder.jpaStaticInitialization(recordedStates, integratorClasses)));
     }
 
     private void validateHibernatePropertiesNotUsed() {
@@ -891,7 +883,7 @@ public final class HibernateOrmProcessor {
             String persistenceUnitName,
             HibernateOrmConfigPersistenceUnit persistenceUnitConfig,
             Set<String> modelClassesAndPackages,
-            List<RecordableXmlMapping> xmlMappings,
+            List<QuarkusXmlMapping> xmlMappings,
             List<JdbcDataSourceBuildItem> jdbcDataSources,
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             LaunchMode launchMode,

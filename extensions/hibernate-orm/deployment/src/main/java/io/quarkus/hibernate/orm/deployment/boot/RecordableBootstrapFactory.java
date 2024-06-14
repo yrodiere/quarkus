@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.runtime.boot;
+package io.quarkus.hibernate.orm.deployment.boot;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -7,26 +7,26 @@ import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.registry.internal.BootstrapServiceRegistryImpl;
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 
+import io.quarkus.hibernate.orm.deployment.PersistenceUnitDescriptorBuildItem;
+import io.quarkus.hibernate.orm.deployment.service.InitialInitiatorListProvider;
+import io.quarkus.hibernate.orm.deployment.service.StandardHibernateORMInitiatorListProvider;
 import io.quarkus.hibernate.orm.runtime.customized.QuarkusIntegratorServiceImpl;
 import io.quarkus.hibernate.orm.runtime.customized.QuarkusStrategySelectorBuilder;
-import io.quarkus.hibernate.orm.runtime.recording.RecordableBootstrap;
 import io.quarkus.hibernate.orm.runtime.service.FlatClassLoaderService;
-import io.quarkus.hibernate.orm.runtime.service.InitialInitiatorListProvider;
-import io.quarkus.hibernate.orm.runtime.service.StandardHibernateORMInitiatorListProvider;
 
 final class RecordableBootstrapFactory {
 
     private static final InitialInitiatorListProvider reactiveInitiatorListProvider = initReactiveListProviderMaybe();
     private static final InitialInitiatorListProvider classicInitiatorListProvider = new StandardHibernateORMInitiatorListProvider();
 
-    public static RecordableBootstrap createRecordableBootstrapBuilder(QuarkusPersistenceUnitDefinition puDefinition) {
+    public static RecordableBootstrap createRecordableBootstrapBuilder(PersistenceUnitDescriptorBuildItem pu) {
         final BootstrapServiceRegistry bsr = buildBootstrapServiceRegistry();
-        final RecordableBootstrap ssrBuilder = new RecordableBootstrap(bsr, getInitiatorListProvider(puDefinition));
+        final RecordableBootstrap ssrBuilder = new RecordableBootstrap(bsr, getInitiatorListProvider(pu));
         return ssrBuilder;
     }
 
-    private static InitialInitiatorListProvider getInitiatorListProvider(QuarkusPersistenceUnitDefinition puDefinition) {
-        if (puDefinition.isReactive()) {
+    private static InitialInitiatorListProvider getInitiatorListProvider(PersistenceUnitDescriptorBuildItem pu) {
+        if (pu.isReactive()) {
             if (reactiveInitiatorListProvider == null) {
                 throw new IllegalStateException(
                         "InitiatorList requires for Hibernate Reactive but Hibernate Reactive extension is not around?");
@@ -51,7 +51,7 @@ final class RecordableBootstrapFactory {
         try {
             //Use reflection as we don't want the Hibernate ORM extension to depend on the Hibernate Reactive extension:
             final Class<?> forName = Class
-                    .forName("io.quarkus.hibernate.reactive.runtime.boot.registry.ReactiveHibernateInitiatorListProvider");
+                    .forName("io.quarkus.hibernate.reactive.deployment.boot.registry.ReactiveHibernateInitiatorListProvider");
             final Object o = forName.getDeclaredConstructor().newInstance();
             return (InitialInitiatorListProvider) o;
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException
