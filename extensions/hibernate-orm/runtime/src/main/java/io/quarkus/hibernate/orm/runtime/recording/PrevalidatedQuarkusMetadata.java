@@ -1,11 +1,18 @@
 package io.quarkus.hibernate.orm.runtime.recording;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.hibernate.MappingException;
@@ -60,7 +67,118 @@ public final class PrevalidatedQuarkusMetadata implements MetadataImplementor {
 
     public static PrevalidatedQuarkusMetadata validateAndWrap(final MetadataImpl original) {
         original.validate();
+        try {
+            printTypeStats(original);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return new PrevalidatedQuarkusMetadata(original);
+    }
+
+    private static void printTypeStats(MetadataImpl metadata) throws IllegalAccessException {
+        Map<Class<?>, Boolean> shouldProcessFieldsCache = new HashMap<>();
+        Predicate<Class<?>> shouldProcessFields = c -> {
+            Boolean result = shouldProcessFieldsCache.get(c);
+            if (result != null) {
+                return result;
+            }
+            // Ignore Java/sun types
+            result = !c.getPackageName().startsWith("java.") && !c.getPackageName().startsWith("sun.");
+            // Ignore easily recorded types
+            result = result && !c.isEnum();
+            shouldProcessFieldsCache.put(c, result);
+            return result;
+        };
+        Map<Class<?>, Boolean> shouldProcessCache = new HashMap<>();
+        Predicate<Class<?>> shouldProcess = c -> {
+            Boolean result = shouldProcessCache.get(c);
+            if (result != null) {
+                return result;
+            }
+            result = shouldProcessFields.test(c) || Map.class.isAssignableFrom(c) || Iterable.class.isAssignableFrom(c);
+            shouldProcessCache.put(c, result);
+            return result;
+        };
+
+        Set<Class<?>> typesInGraph = new HashSet<>();
+        Set<Class<?>> typesToRecordInGraph = new HashSet<>();
+        Set<Object> objectsInGraph = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Object> toProcess = Collections.newSetFromMap(new IdentityHashMap<>());
+        Consumer<Object> planProcessing = o -> {
+            if (o == null) {
+                return;
+            }
+            var c = o.getClass();
+            if (!shouldProcess.test(c) || objectsInGraph.contains(o) || toProcess.contains(o)) {
+                return;
+            }
+            if (isSingleton(c, o)) {
+                return;
+            }
+            toProcess.add(o);
+            if (typesInGraph.add(c)) {
+                if (!Collection.class.isAssignableFrom(c) && !Map.class.isAssignableFrom(c)) {
+                    System.out.println("Found type " + c);
+                    typesToRecordInGraph.add(c);
+                }
+            }
+        };
+
+        planProcessing.accept(metadata); // Start with the metadata
+
+        while (!toProcess.isEmpty()) {
+            var toProcessIt = toProcess.iterator();
+            var processing = toProcessIt.next();
+            toProcessIt.remove();
+            objectsInGraph.add(processing);
+            if (processing instanceof Map) {
+                for (var key : ((Map<?, ?>) processing).keySet()) {
+                    planProcessing.accept(key);
+                }
+                for (var value : ((Map<?, ?>) processing).values()) {
+                    planProcessing.accept(value);
+                }
+            }
+            if (processing instanceof Iterable) {
+                for (var value : (Iterable<?>) processing) {
+                    planProcessing.accept(value);
+                }
+            }
+            var clazz = processing.getClass();
+            while (clazz != null) {
+                if (shouldProcessFields.test(clazz)) {
+                    for (Field field : clazz.getDeclaredFields()) {
+                        if ((field.getModifiers() & Modifier.STATIC) != 0) {
+                            // Ignore static fields
+                            continue;
+                        }
+                        field.setAccessible(true);
+                        var value = field.get(processing);
+                        planProcessing.accept(value);
+                    }
+                }
+                clazz = clazz.getSuperclass();
+            }
+        }
+        System.out.println("Found " + typesToRecordInGraph.size() + " types to record");
+    }
+
+    private static boolean isSingleton(Class<?> c, Object o) {
+        Field instanceField;
+        try {
+            instanceField = c.getField("INSTANCE");
+        } catch (NoSuchFieldException e) {
+            return false;
+        }
+        if ((instanceField.getModifiers() & Modifier.STATIC) == 0) {
+            return false;
+        }
+        instanceField.setAccessible(true);
+        try {
+            return instanceField.get(null) == o;
+        } catch (IllegalAccessException e) {
+            return false;
+        }
     }
 
     // New helpers on this Quarkus specific metadata; these are useful to boot and manage the recorded state:
