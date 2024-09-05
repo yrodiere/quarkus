@@ -2,6 +2,8 @@ package io.quarkus.hibernate.orm.applicationfieldaccess;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +27,7 @@ import org.jboss.logmanager.Level;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkus.deployment.util.ProcessUtil;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
@@ -62,6 +65,23 @@ public class PublicFieldAccessInheritanceTest {
             // the logging level for a specific "org.hibernate.something" category, which we already do below.
             //.overrideConfigKey("quarkus.hibernate-orm.log.bind-parameters", "true")
             .setBeforeAllCustomizer(() -> {
+                var pid = Long.toString(ProcessHandle.current().pid());
+                try {
+                    var pb = new ProcessBuilder(Arrays.asList("cpulimit", "-l", "200", "-p", pid));
+                    var cpulimitProcess = ProcessUtil.launchProcess(pb, true);
+                    pb = new ProcessBuilder(Arrays.asList("ionice", "-c", "3", "-p", pid));
+                    var ioniceProcess = ProcessUtil.launchProcess(pb, true);
+                    if (ioniceProcess.waitFor() != 0) {
+                        throw new AssertionError("ionice failed!");
+                    }
+                    Thread.sleep(1000);
+                    if (!cpulimitProcess.isAlive()) {
+                        throw new AssertionError("cpulimit failed!");
+                    }
+                } catch (IOException | InterruptedException e) {
+                    throw new AssertionError("cpulimit/ionice failed!", e);
+                }
+
                 // Used to differentiate reruns of flaky tests in Maven
                 var testRunId = PublicFieldAccessInheritanceTest.class + "/" + UUID.randomUUID();
                 System.out.println("Test run ID: " + testRunId);
