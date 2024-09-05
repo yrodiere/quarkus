@@ -2,6 +2,9 @@ package io.quarkus.hibernate.orm.applicationfieldaccess;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.util.Arrays;
+
 import jakarta.inject.Inject;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
@@ -19,6 +22,7 @@ import org.hibernate.Hibernate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkus.deployment.util.ProcessUtil;
 import io.quarkus.test.QuarkusUnitTest;
 
 /**
@@ -34,6 +38,24 @@ public class PublicFieldAccessInheritanceTest {
                     .addClass(MyAbstractEntity.class)
                     .addClass(MyConcreteEntity.class)
                     .addClass(FieldAccessEnhancedDelegate.class))
+            .setBeforeAllCustomizer(() -> {
+                var pid = Long.toString(ProcessHandle.current().pid());
+                try {
+                    var pb = new ProcessBuilder(Arrays.asList("cpulimit", "-l", "200", "-p", pid));
+                    var cpulimitProcess = ProcessUtil.launchProcess(pb, true);
+                    pb = new ProcessBuilder(Arrays.asList("ionice", "-c", "3", "-p", pid));
+                    var ioniceProcess = ProcessUtil.launchProcess(pb, true);
+                    if (ioniceProcess.waitFor() != 0) {
+                        throw new AssertionError("ionice failed!");
+                    }
+                    Thread.sleep(1000);
+                    if (!cpulimitProcess.isAlive()) {
+                        throw new AssertionError("cpulimit failed!");
+                    }
+                } catch (IOException | InterruptedException e) {
+                    throw new AssertionError("cpulimit/ionice failed!", e);
+                }
+            })
             .withConfigurationResource("application.properties")
             // FIXME Temporary debug options for https://github.com/quarkusio/quarkus/issues/42479
             .overrideConfigKey("quarkus.hibernate-orm.log.sql", "true")
