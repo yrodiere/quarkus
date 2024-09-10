@@ -34,7 +34,9 @@ public class PublicFieldAccessInheritanceTest {
                     .addClass(MyAbstractEntity.class)
                     .addClass(MyConcreteEntity.class)
                     .addClass(FieldAccessEnhancedDelegate.class))
-            .withConfigurationResource("application.properties");
+            .withConfigurationResource("application.properties")
+            // FIXME: this appears to leak to other tests
+            .overrideConfigKey("quarkus.hibernate-orm.log.bind-parameters", "true");
 
     @Inject
     EntityManager em;
