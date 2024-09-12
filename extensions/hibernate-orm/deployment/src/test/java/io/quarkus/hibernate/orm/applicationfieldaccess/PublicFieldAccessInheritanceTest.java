@@ -67,19 +67,18 @@ public class PublicFieldAccessInheritanceTest {
             .setBeforeAllCustomizer(() -> {
                 var pid = Long.toString(ProcessHandle.current().pid());
                 try {
-                    var pb = new ProcessBuilder(Arrays.asList("cpulimit", "-l", "200", "-p", pid));
-                    var cpulimitProcess = ProcessUtil.launchProcess(pb, true);
+                    var pb = new ProcessBuilder(Arrays.asList("taskset", "--cpu-list", "-p", "0-3", pid));
+                    var tasksetProcess = ProcessUtil.launchProcess(pb, true);
                     pb = new ProcessBuilder(Arrays.asList("ionice", "-c", "3", "-p", pid));
                     var ioniceProcess = ProcessUtil.launchProcess(pb, true);
+                    if (tasksetProcess.waitFor() != 0) {
+                        throw new AssertionError("taskset failed!");
+                    }
                     if (ioniceProcess.waitFor() != 0) {
                         throw new AssertionError("ionice failed!");
                     }
-                    Thread.sleep(1000);
-                    if (!cpulimitProcess.isAlive()) {
-                        throw new AssertionError("cpulimit failed!");
-                    }
                 } catch (IOException | InterruptedException e) {
-                    throw new AssertionError("cpulimit/ionice failed!", e);
+                    throw new AssertionError("taskset/ionice failed!", e);
                 }
 
                 // Used to differentiate reruns of flaky tests in Maven
