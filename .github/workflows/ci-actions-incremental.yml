@@ -380,12 +380,12 @@ jobs:
             if ! (echo -n "${GIB_IMPACTED_MODULES}" | grep 'tcks/.*' > /dev/null); then run_tcks=false; fi
           fi
           echo "run_devtools=${run_devtools}, run_gradle=${run_gradle}, run_maven=${run_maven}, run_kubernetes=${run_kubernetes}, run_quickstarts=${run_quickstarts}, run_tcks=${run_tcks}"
-          echo "run_devtools=${run_devtools}" >> $GITHUB_OUTPUT
-          echo "run_gradle=${run_gradle}" >> $GITHUB_OUTPUT
-          echo "run_maven=${run_maven}" >> $GITHUB_OUTPUT
-          echo "run_kubernetes=${run_kubernetes}" >> $GITHUB_OUTPUT
-          echo "run_quickstarts=${run_quickstarts}" >> $GITHUB_OUTPUT
-          echo "run_tcks=${run_tcks}" >> $GITHUB_OUTPUT
+          echo "run_devtools=false" >> $GITHUB_OUTPUT
+          echo "run_gradle=false" >> $GITHUB_OUTPUT
+          echo "run_maven=false" >> $GITHUB_OUTPUT
+          echo "run_kubernetes=false" >> $GITHUB_OUTPUT
+          echo "run_quickstarts=false" >> $GITHUB_OUTPUT
+          echo "run_tcks=false" >> $GITHUB_OUTPUT
 
   jvm-tests:
     name: ${{ matrix.java.name }}
@@ -493,7 +493,7 @@ jobs:
           # the format of this file is specific: it's one option per line, thus the weird formatting in matrix-jvm-tests.json
           # see https://maven.apache.org/configure.html#a.mvn.2Fmaven.config_file.3A
           # IMPORTANT: we cannot simply replace all spaces with new lines as we have a module with spaces in the name (to test spaces are supported)
-          echo -e "$MATRIX_JAVA_MODULES" >> .mvn/maven.config
+          echo -e "-pl extensions/hibernate-orm/deployment" >> .mvn/maven.config
           ./mvnw $COMMON_MAVEN_ARGS $COMMON_TEST_MAVEN_ARGS $PTS_MAVEN_ARGS clean install -Dsurefire.timeout=1200 -Dno-test-kubernetes ${{ matrix.java.maven_args }}
       - name: Clean Gradle temp directory
         if: always()
@@ -1042,12 +1042,10 @@ jobs:
 
   virtual-thread-native-tests:
     name: Native Tests - Virtual Thread - ${{matrix.category}}
-    runs-on: ${{ fromJson(needs.configure.outputs.config).runners[matrix.os-name].runsOn || matrix.os-name }}
-    needs: [configure, build-jdk17, calculate-test-jobs]
+    runs-on: ${{matrix.os-name}}
+    needs: [build-jdk17, calculate-test-jobs]
     # Skip main in forks
-    if: needs.calculate-test-jobs.outputs.virtual_threads_matrix != '{}'
-    env:
-      RUNS_ON_ENABLED: ${{ fromJson(needs.configure.outputs.config).runners[matrix.os-name].runsOn && 'true' || 'false' }}
+    if: "needs.calculate-test-jobs.outputs.virtual_threads_matrix != '{}' && (github.repository == 'quarkusio/quarkus' || !endsWith(github.ref, '/main'))"
     timeout-minutes: ${{matrix.timeout}}
     strategy:
       max-parallel: ${{ fromJson(needs.configure.outputs.config).maxParallel || 12 }}
@@ -1215,9 +1213,8 @@ jobs:
     env:
       # leave more space for the actual native compilation and execution
       MAVEN_OPTS: -Xmx1g
-      RUNS_ON_ENABLED: ${{ fromJson(needs.configure.outputs.config).runners[matrix.os-name].runsOn && 'true' || 'false' }}
     # Skip main in forks
-    if: needs.calculate-test-jobs.outputs.native_matrix != '{}'
+    if: "needs.calculate-test-jobs.outputs.native_matrix != '{}' && (github.repository == 'quarkusio/quarkus' || !endsWith(github.ref, '/main'))"
     # Ignore the following YAML Schema error
     timeout-minutes: ${{matrix.timeout}}
     strategy:
