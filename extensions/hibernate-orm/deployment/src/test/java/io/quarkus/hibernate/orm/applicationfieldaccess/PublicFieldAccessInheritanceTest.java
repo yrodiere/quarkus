@@ -3,7 +3,9 @@ package io.quarkus.hibernate.orm.applicationfieldaccess;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.function.Function;
 
 import jakarta.inject.Inject;
 import jakarta.persistence.Entity;
@@ -19,9 +21,11 @@ import jakarta.transaction.SystemException;
 import jakarta.transaction.UserTransaction;
 
 import org.hibernate.Hibernate;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import io.quarkus.deployment.util.FileUtil;
 import io.quarkus.deployment.util.ProcessUtil;
 import io.quarkus.test.QuarkusUnitTest;
 
@@ -31,6 +35,73 @@ import io.quarkus.test.QuarkusUnitTest;
  */
 public class PublicFieldAccessInheritanceTest {
 
+    public static class SystemPropertyValue<T> {
+        private final String name;
+        private final T defaultValue;
+        private final Function<String, T> parse;
+        private final Function<T, String> format;
+
+        private SystemPropertyValue(String name, T defaultValue,
+                Function<String, T> parse, Function<T, String> format) {
+            this.name = name;
+            this.defaultValue = defaultValue;
+            this.parse = parse;
+            this.format = format;
+        }
+
+        public final T get() {
+            String val = System.getProperty(name);
+            if (val == null) {
+                return defaultValue;
+            } else {
+                return parse.apply(val);
+            }
+        }
+
+        public void set(T value) {
+            System.setProperty(name, format.apply(value));
+        }
+    }
+
+    private static SystemPropertyValue<Boolean> reproducedProp = new SystemPropertyValue<>(
+            "reproducer.reproduced",
+            false,
+            Boolean::parseBoolean,
+            v -> Boolean.toString(v));
+    private static SystemPropertyValue<Integer> attemptCountProp = new SystemPropertyValue<>(
+            "reproducer.attemptCount",
+            0,
+            Integer::parseInt,
+            v -> Integer.toString(v));
+
+    private static void log(int attemptCount, String message) {
+        System.out.println("[Attempt #" + attemptCount + "] " + message);
+    }
+
+    static {
+        int attemptCount = attemptCountProp.get();
+        if (attemptCount > 0) {
+            log(attemptCount, "Skipping taskset/ionice");
+        } else {
+            log(attemptCount, "Running taskset/ionice");
+            var pid = Long.toString(ProcessHandle.current().pid());
+            try {
+                var pb = new ProcessBuilder(Arrays.asList("taskset", "--cpu-list", "-p", "0-3", pid));
+                var tasksetProcess = ProcessUtil.launchProcess(pb, true);
+                pb = new ProcessBuilder(Arrays.asList("ionice", "-c", "3", "-p", pid));
+                var ioniceProcess = ProcessUtil.launchProcess(pb, true);
+                if (tasksetProcess.waitFor() != 0) {
+                    throw new RuntimeException("taskset failed!");
+                }
+                if (ioniceProcess.waitFor() != 0) {
+                    throw new RuntimeException("ionice failed!");
+                }
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException("taskset/ionice failed!", e);
+            }
+        }
+    }
+
     @RegisterExtension
     static QuarkusUnitTest runner = new QuarkusUnitTest()
             .withApplicationRoot((jar) -> jar
@@ -38,23 +109,6 @@ public class PublicFieldAccessInheritanceTest {
                     .addClass(MyAbstractEntity.class)
                     .addClass(MyConcreteEntity.class)
                     .addClass(FieldAccessEnhancedDelegate.class))
-            .setBeforeAllCustomizer(() -> {
-                var pid = Long.toString(ProcessHandle.current().pid());
-                try {
-                    var pb = new ProcessBuilder(Arrays.asList("taskset", "--cpu-list", "-p", "0-3", pid));
-                    var tasksetProcess = ProcessUtil.launchProcess(pb, true);
-                    pb = new ProcessBuilder(Arrays.asList("ionice", "-c", "3", "-p", pid));
-                    var ioniceProcess = ProcessUtil.launchProcess(pb, true);
-                    if (tasksetProcess.waitFor() != 0) {
-                        throw new AssertionError("taskset failed!");
-                    }
-                    if (ioniceProcess.waitFor() != 0) {
-                        throw new AssertionError("ionice failed!");
-                    }
-                } catch (IOException | InterruptedException e) {
-                    throw new AssertionError("taskset/ionice failed!", e);
-                }
-            })
             .withConfigurationResource("application.properties")
             // FIXME Temporary debug options for https://github.com/quarkusio/quarkus/issues/42479
             .overrideConfigKey("quarkus.hibernate-orm.log.sql", "true")
@@ -76,11 +130,38 @@ public class PublicFieldAccessInheritanceTest {
     public void testFieldAccess()
             throws SystemException, NotSupportedException, HeuristicRollbackException, HeuristicMixedException,
             RollbackException {
+        int attemptCount = attemptCountProp.get();
+        log(attemptCount, "Running test");
         // Ideally we'd write a @ParameterizedTest and pass the delegates as parameters,
         // but we cannot do that due to JUnit using a different classloader than the test.
-        for (FieldAccessEnhancedDelegate delegate : FieldAccessEnhancedDelegate.values()) {
-            doTestFieldAccess(delegate);
+        try {
+            for (FieldAccessEnhancedDelegate delegate : FieldAccessEnhancedDelegate.values()) {
+                doTestFieldAccess(delegate);
+            }
+        } catch (AssertionError t) {
+            reproducedProp.set(true);
+            throw t;
         }
+        if (reproducedProp.get()) {
+            log(attemptCount, "Success after the bug was reproduced.");
+            log(attemptCount, "Allowing test to pass.");
+        } else {
+            log(attemptCount, "Success before the bug was reproduced.");
+            log(attemptCount, "Cleaning up debug data to avoid filling up the disk.");
+            try {
+                FileUtil.deleteDirectory(Path.of("target/debug/"));
+            } catch (IOException e) {
+                log(attemptCount, "Failed to clean up debug data: " + e.getMessage() + ".");
+                e.printStackTrace();
+                log(attemptCount, "Whatever, continuing.");
+            }
+            throw new AssertionError("[Attempt #" + attemptCount + "] Bug wasn't reproduced: triggering test restart.");
+        }
+    }
+
+    @AfterEach
+    void increment() {
+        attemptCountProp.set(attemptCountProp.get() + 1);
     }
 
     private void doTestFieldAccess(FieldAccessEnhancedDelegate delegate)
