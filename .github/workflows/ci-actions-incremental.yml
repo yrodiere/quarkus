@@ -303,12 +303,12 @@ jobs:
           fi
           echo "run_jvm=${run_jvm}, run_devtools=${run_devtools}, run_gradle=${run_gradle}, run_maven=${run_maven}, run_kubernetes=${run_kubernetes}, run_quickstarts=${run_quickstarts}, run_tcks=${run_tcks}"
           echo "run_jvm=${run_jvm}" >> $GITHUB_OUTPUT
-          echo "run_devtools=${run_devtools}" >> $GITHUB_OUTPUT
-          echo "run_gradle=${run_gradle}" >> $GITHUB_OUTPUT
-          echo "run_maven=${run_maven}" >> $GITHUB_OUTPUT
-          echo "run_kubernetes=${run_kubernetes}" >> $GITHUB_OUTPUT
-          echo "run_quickstarts=${run_quickstarts}" >> $GITHUB_OUTPUT
-          echo "run_tcks=${run_tcks}" >> $GITHUB_OUTPUT
+          echo "run_devtools=false" >> $GITHUB_OUTPUT
+          echo "run_gradle=false" >> $GITHUB_OUTPUT
+          echo "run_maven=false" >> $GITHUB_OUTPUT
+          echo "run_kubernetes=false" >> $GITHUB_OUTPUT
+          echo "run_quickstarts=false" >> $GITHUB_OUTPUT
+          echo "run_tcks=false" >> $GITHUB_OUTPUT
 
   jvm-tests:
     name: JVM Tests - JDK ${{matrix.java.name}}
@@ -402,7 +402,7 @@ jobs:
         env:
           CAPTURE_BUILD_SCAN: true
         # Despite the pre-calculated run_jvm flag, GIB has to be re-run here to figure out the exact submodules to build.
-        run: ./mvnw $COMMON_MAVEN_ARGS $COMMON_TEST_MAVEN_ARGS $PTS_MAVEN_ARGS clean install -Dsurefire.timeout=1200 -pl !integration-tests/gradle -pl !integration-tests/maven -pl !integration-tests/devmode -pl !integration-tests/devtools -Dno-test-kubernetes -pl !docs ${{ matrix.java.maven_args }} ${{ needs.build-jdk17.outputs.gib_args }}
+        run: ./mvnw $COMMON_MAVEN_ARGS $COMMON_TEST_MAVEN_ARGS $PTS_MAVEN_ARGS clean install -Dsurefire.timeout=1200 -pl extensions/hibernate-orm/deployment -Dno-test-kubernetes ${{ matrix.java.maven_args }} ${{ needs.build-jdk17.outputs.gib_args }}
       - name: Clean Gradle temp directory
         if: always()
         run: devtools/gradle/gradlew --stop && rm -rf devtools/gradle/gradle-extension-plugin/build/tmp
@@ -934,8 +934,8 @@ jobs:
     name: Native Tests - Virtual Thread - ${{matrix.category}}
     runs-on: ${{matrix.os-name}}
     needs: [build-jdk17, calculate-test-jobs]
-    # Skip main in forks
-    if: "needs.calculate-test-jobs.outputs.virtual_threads_matrix != '{}' && (github.repository == 'quarkusio/quarkus' || !endsWith(github.ref, '/main'))"
+    # DO NOT RUN -- not relevant to reproducer
+    if: "false"
     timeout-minutes: ${{matrix.timeout}}
     strategy:
       max-parallel: 12
@@ -1099,8 +1099,8 @@ jobs:
     env:
       # leave more space for the actual native compilation and execution
       MAVEN_OPTS: -Xmx1g
-    # Skip main in forks
-    if: "needs.calculate-test-jobs.outputs.native_matrix != '{}' && (github.repository == 'quarkusio/quarkus' || !endsWith(github.ref, '/main'))"
+    # DO NOT RUN -- not relevant to reproducer
+    if: "false"
     # Ignore the following YAML Schema error
     timeout-minutes: ${{matrix.timeout}}
     strategy:
