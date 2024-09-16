@@ -23,6 +23,7 @@ import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.MethodInfo;
+import org.jboss.logging.Logger;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -44,6 +45,8 @@ import io.quarkus.panache.common.deployment.PanacheMovingAnnotationVisitor;
  */
 public final class PanacheEntityClassAccessorGenerationVisitor extends ClassVisitor {
 
+    private static final Logger LOGGER = Logger.getLogger(PanacheEntityClassAccessorGenerationVisitor.class);
+
     protected final Type thisClass;
     private final Map<String, ? extends EntityField> fields;
     private final Set<String> userMethods = new HashSet<>();
@@ -62,13 +65,27 @@ public final class PanacheEntityClassAccessorGenerationVisitor extends ClassVisi
     @Override
     public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
         EntityField entityField = fields == null ? null : fields.get(name);
-        if (entityField == null || !EntityField.Visibility.PUBLIC.equals(entityField.visibility)
-                || hasGetterForField(entityField)) {
-            // If the field does not exist or is non-public,
-            // or if the getter for this entity field already exists,
-            // we won't alter it in any way.
+        // If the field does not exist or is non-public,
+        // or if the getter for this entity field already exists,
+        // we won't alter it in any way.
+        if (entityField == null) {
+            LOGGER.tracef("%s.visitField() for class '%s': field '%s' is unknown, skipping",
+                    getClass().getName(), entityInfo.name(), name);
             return super.visitField(access, name, descriptor, signature, value);
         }
+        if (!EntityField.Visibility.PUBLIC.equals(entityField.visibility)) {
+            LOGGER.tracef("%s.visitField() for class '%s': field '%s' is non-public. Skipping.",
+                    getClass().getName(), entityInfo.name(), name);
+            return super.visitField(access, name, descriptor, signature, value);
+        }
+        if (hasGetterForField(entityField)) {
+            LOGGER.tracef("%s.visitField() for class '%s': field '%s' already has a getter. Skipping.",
+                    getClass().getName(), entityInfo.name(), name);
+            return super.visitField(access, name, descriptor, signature, value);
+        }
+
+        LOGGER.tracef("%s.visitField() for class '%s': field '%s' is known, public, and doesn't have a getter. Visiting.",
+                getClass().getName(), entityInfo.name(), entityField.name);
 
         // We're going to generate a getter for this field;
         // let's alter the field accordingly.
@@ -118,7 +135,14 @@ public final class PanacheEntityClassAccessorGenerationVisitor extends ClassVisi
     }
 
     @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        LOGGER.tracef("%s.visit() for class '%s'", getClass().getName(), entityInfo.name());
+        super.visit(version, access, name, signature, superName, interfaces);
+    }
+
+    @Override
     public void visitEnd() {
+        LOGGER.tracef("%s.visitEnd() for class '%s'", getClass().getName(), entityInfo.name());
         // FIXME: generate default constructor
 
         generateAccessors();
@@ -131,10 +155,14 @@ public final class PanacheEntityClassAccessorGenerationVisitor extends ClassVisi
             return;
         for (EntityField field : fields.values()) {
             if (!EntityField.Visibility.PUBLIC.equals(field.visibility)) {
+                LOGGER.tracef("%s.generateAccessors() for class '%s': field '%s' is not public. Skipping.",
+                        getClass().getName(), entityInfo.name(), field.name);
                 // We don't generate accessors for non-public fields
                 // (but may rely on library-specific accessors in other places)
                 continue;
             }
+            LOGGER.tracef("%s.generateAccessors() for class '%s': field '%s' is public. Generating.",
+                    getClass().getName(), entityInfo.name(), field.name);
             // Getter
             String getterName = field.getGetterName();
             String getterDescriptor = "()" + field.descriptor;
