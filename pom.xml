@@ -128,9 +128,6 @@
         <!-- relying on the fact that the extension descriptor, generated as part of an extension build, is available -->
         <module>devtools</module>
 
-        <!-- Integration Tests -->
-        <module>integration-tests</module>
-
         <!-- Misc. -->
         <module>docs</module>
     </modules>
