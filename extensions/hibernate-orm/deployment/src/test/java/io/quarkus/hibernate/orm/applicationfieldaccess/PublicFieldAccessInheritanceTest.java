@@ -118,7 +118,8 @@ public class PublicFieldAccessInheritanceTest {
             // the logging level for a specific "org.hibernate.something" category, which we already do below.
             //.overrideConfigKey("quarkus.hibernate-orm.log.bind-parameters", "true")
             .debugBytecode(true)
-            .traceCategories("org.hibernate", "io.quarkus.hibernate", "io.quarkus.panache");
+            .traceCategories("org.hibernate", "io.quarkus.hibernate", "io.quarkus.panache",
+                    "io.quarkus.deployment.steps.ClassTransformingBuildStep");
 
     @Inject
     EntityManager em;
