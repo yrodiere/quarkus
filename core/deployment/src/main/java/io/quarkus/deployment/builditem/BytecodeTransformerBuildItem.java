@@ -101,6 +101,20 @@ public final class BytecodeTransformerBuildItem extends MultiBuildItem {
         }
     }
 
+    @Override
+    public String toString() {
+        return "BytecodeTransformerBuildItem{" +
+                "classToTransform='" + classToTransform + '\'' +
+                ", visitorFunction=" + visitorFunction +
+                ", inputTransformer=" + inputTransformer +
+                ", requireConstPoolEntry=" + requireConstPoolEntry +
+                ", cacheable=" + cacheable +
+                ", classReaderOptions=" + classReaderOptions +
+                ", continueOnFailure=" + continueOnFailure +
+                ", priority=" + priority +
+                '}';
+    }
+
     public String getClassToTransform() {
         return classToTransform;
     }

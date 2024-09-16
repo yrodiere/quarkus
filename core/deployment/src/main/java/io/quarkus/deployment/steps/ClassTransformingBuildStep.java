@@ -186,6 +186,7 @@ public class ClassTransformingBuildStep {
         for (Map.Entry<String, List<BytecodeTransformerBuildItem>> entry : bytecodeTransformers
                 .entrySet()) {
             String className = entry.getKey();
+            log.tracef("Transformers for class '%s': %s", className, entry.getValue());
             boolean cacheable = !nonCacheable.contains(className);
             if (cacheable && transformedClassesCache.containsKey(className)) {
                 if (liveReloadBuildItem.getChangeInformation() != null) {
@@ -346,6 +347,7 @@ public class ClassTransformingBuildStep {
 
     private byte[] transformClass(String className, List<BiFunction<String, ClassVisitor, ClassVisitor>> visitors,
             byte[] classData, List<BiFunction<String, byte[], byte[]>> preVisitFunctions, int classReaderOptions) {
+        log.tracef("Pre-visitor functions for class '%s': %s", className, preVisitFunctions);
         for (BiFunction<String, byte[], byte[]> i : preVisitFunctions) {
             classData = i.apply(className, classData);
             if (classData == null) {
@@ -353,6 +355,7 @@ public class ClassTransformingBuildStep {
             }
         }
         byte[] data;
+        log.tracef("Visitor functions for class '%s': %s", className, visitors);
         if (!visitors.isEmpty()) {
             ClassReader cr = new ClassReader(classData);
             ClassWriter writer = new QuarkusClassWriter(cr,
