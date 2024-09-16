@@ -51,7 +51,8 @@ public class PublicFieldAccessInheritanceTest {
     // needs to be set programmatically in order to not leak to other tests.
     // See https://quarkusio.zulipchat.com/#narrow/stream/187038-dev/topic/Build.20logs
     // See https://github.com/quarkusio/quarkus/issues/43180
-    private static final List<String> TRACE_CATEGORIES = List.of("org.hibernate", "io.quarkus.hibernate", "io.quarkus.panache");
+    private static final List<String> TRACE_CATEGORIES = List.of("org.hibernate", "io.quarkus.hibernate", "io.quarkus.panache",
+            "io.quarkus.deployment.steps.ClassTransformingBuildStep");
 
     public static class SystemPropertyValue<T> {
         private final String name;
