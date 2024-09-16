@@ -1,5 +1,10 @@
 package io.quarkus.hibernate.orm.deployment;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.function.BiFunction;
 
 import org.hibernate.bytecode.enhance.internal.bytebuddy.CoreTypePool;
@@ -7,10 +12,12 @@ import org.hibernate.bytecode.enhance.internal.bytebuddy.EnhancerClassLocator;
 import org.hibernate.bytecode.enhance.internal.bytebuddy.ModelTypePool;
 import org.hibernate.bytecode.enhance.spi.Enhancer;
 import org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl;
+import org.jboss.logging.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
+import io.quarkus.bootstrap.BootstrapDebug;
 import io.quarkus.deployment.QuarkusClassVisitor;
 import io.quarkus.deployment.QuarkusClassWriter;
 import io.quarkus.gizmo.Gizmo;
@@ -32,6 +39,8 @@ import net.bytebuddy.dynamic.ClassFileLocator;
  * @author Sanne Grinovero <sanne@hibernate.org>
  */
 public final class HibernateEntityEnhancer implements BiFunction<String, ClassVisitor, ClassVisitor> {
+
+    private static final Logger LOGGER = Logger.getLogger(HibernateEntityEnhancer.class);
 
     private static final BytecodeProviderImpl PROVIDER = new org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl(
             ClassFileVersion.JAVA_V17);
@@ -80,14 +89,31 @@ public final class HibernateEntityEnhancer implements BiFunction<String, ClassVi
         }
 
         private byte[] hibernateEnhancement(final String className, final byte[] originalBytes) {
-            final byte[] enhanced = enhancerHolder.getEnhancer().enhance(className, originalBytes);
+            final byte[] enhanced = doEnhance(enhancerHolder, className, originalBytes);
             return enhanced == null ? originalBytes : enhanced;
         }
 
     }
 
-    public byte[] enhance(String className, byte[] bytes) {
-        return enhancerHolder.getEnhancer().enhance(className, bytes);
+    public byte[] enhance(String className, byte[] originalBytes) {
+        return doEnhance(enhancerHolder, className, originalBytes);
+    }
+
+    private static byte[] doEnhance(EnhancerHolder enhancerHolder, String className, byte[] originalBytes) {
+        String transformedClassesDir = BootstrapDebug.transformedClassesDir();
+        if (transformedClassesDir != null) {
+            try {
+                Path dumpPath = Path.of(transformedClassesDir, "hibernate-enhancer-input",
+                        className.replace(".", File.separator) + ".class");
+                Files.createDirectories(dumpPath.getParent());
+                Files.write(dumpPath, originalBytes, StandardOpenOption.CREATE);
+                LOGGER.infof("Wrote a copy of the Hibernate Enhancer input to %s", dumpPath);
+            } catch (IOException e) {
+                LOGGER.errorf(e, "Failed to write a copy of the Hibernate Enhancer input for class '%s': %s",
+                        className, e.getMessage());
+            }
+        }
+        return enhancerHolder.getEnhancer().enhance(className, originalBytes);
     }
 
     private static class EnhancerHolder {
