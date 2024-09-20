@@ -18,11 +18,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -92,8 +94,29 @@ public class ClassTransformingBuildStep {
                 && removedResourceBuildItems.isEmpty()) {
             return new TransformedClassesBuildItem(Collections.emptyMap());
         }
-        final Map<String, List<BytecodeTransformerBuildItem>> bytecodeTransformers = new HashMap<>(
-                bytecodeTransformerBuildItems.size());
+        // DO NOT MERGE -- just to reproduce the problem
+        var comparatorHack = new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                if (o1.equals(o2)) {
+                    return 0;
+                } else if (o1.equals(
+                        "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyAbstractEntity")
+                        || o2.equals(
+                                "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyMappedSuperclass")) {
+                    return -1;
+                } else if (o1.equals(
+                        "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyMappedSuperclass")
+                        || o2.equals(
+                                "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyAbstractEntity")) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+        }
+                .thenComparing(Comparator.naturalOrder());
+        final Map<String, List<BytecodeTransformerBuildItem>> bytecodeTransformers = new TreeMap<>(comparatorHack);
         Set<String> noConstScanning = new HashSet<>();
         Map<String, Set<String>> constScanning = new HashMap<>();
         Set<String> nonCacheable = new HashSet<>();
@@ -223,6 +246,8 @@ public class ClassTransformingBuildStep {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
                 transformedToArchive.put(classFileName, jar);
+                // DO NOT MERGE -- just to reproduce the problem
+                buildExecutor = Executors.newSingleThreadExecutor();
                 transformed.add(buildExecutor.submit(new Callable<TransformedClassesBuildItem.TransformedClass>() {
                     @Override
                     public TransformedClassesBuildItem.TransformedClass call() throws Exception {
