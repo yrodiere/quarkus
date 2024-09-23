@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
-import java.util.function.BooleanSupplier;
 
 import org.hibernate.bytecode.enhance.internal.bytebuddy.CoreTypePool;
 import org.hibernate.bytecode.enhance.internal.bytebuddy.EnhancerClassLocator;
@@ -140,66 +138,15 @@ public final class HibernateEntityEnhancer implements BiFunction<String, ClassVi
         final ThreadLocal<EnhancerClassLocator> localLocator = ThreadLocal
                 .withInitial(() -> ModelTypePool.buildModelTypePool(QuarkusClassFileLocator.INSTANCE,
                         CORE_POOL));
-        final AtomicBoolean abstractDone = new AtomicBoolean();
-        final AtomicBoolean concreteDone = new AtomicBoolean();
-        final AtomicBoolean mappedStarted = new AtomicBoolean();
 
         @Override
         public void registerClassNameAndBytes(String s, byte[] bytes) {
-            // HACK: to reproduce the problem reliably.
-            switch (s) {
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyConcreteEntity":
-                    waitUntil(() -> mappedStarted.get());
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyMappedSuperclass":
-                    waitUntil(() -> abstractDone.get());
-                    break;
-                default:
-                    break;
-            }
-            // END HACK
             localLocator.get().registerClassNameAndBytes(s, bytes);
-            // HACK: to reproduce the problem reliably.
-            switch (s) {
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyMappedSuperclass":
-                    mappedStarted.set(true);
-                    waitUntil(() -> abstractDone.get() && concreteDone.get());
-                    break;
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyAbstractEntity":
-                    break;
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyConcreteEntity":
-                    waitUntil(() -> abstractDone.get());
-                    break;
-                default:
-                    break;
-            }
-            // END HACK
         }
 
         @Override
         public void deregisterClassNameAndBytes(String s) {
-            // HACK: to reproduce the problem reliably.
-            switch (s) {
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyAbstractEntity":
-                    abstractDone.set(true);
-                    break;
-                case "io.quarkus.hibernate.orm.applicationfieldaccess.PublicFieldAccessInheritanceTest$MyConcreteEntity":
-                    concreteDone.set(true);
-                    break;
-                default:
-                    break;
-            }
-            // END HACK
             localLocator.get().deregisterClassNameAndBytes(s);
-        }
-
-        private void waitUntil(BooleanSupplier condition) {
-            try {
-                while (!condition.getAsBoolean()) {
-                    Thread.sleep(100);
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
         }
 
         @Override
