@@ -135,6 +135,10 @@
                             <!-- These tests seem to leak metaspace memory
                                  so we run them in a separate, short-lived JVM -->
                             <excludedGroups>devmode</excludedGroups>
+                            <environmentVariables combine.children="append">
+                                <QUARKUS_LOG_CONSOLE_ASYNC>true</QUARKUS_LOG_CONSOLE_ASYNC>
+                                <QUARKUS_LOG_CONSOLE_ASYNC_QUEUE_LENGTH>4096</QUARKUS_LOG_CONSOLE_ASYNC_QUEUE_LENGTH>
+                            </environmentVariables>
                         </configuration>
                     </execution>
                     <execution>
