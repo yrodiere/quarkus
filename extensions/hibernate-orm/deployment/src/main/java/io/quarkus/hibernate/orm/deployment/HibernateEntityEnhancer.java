@@ -42,7 +42,8 @@ public final class HibernateEntityEnhancer implements BiFunction<String, ClassVi
 
     private static final Logger LOGGER = Logger.getLogger(HibernateEntityEnhancer.class);
 
-    private static final BytecodeProviderImpl PROVIDER = new TracingEnhancerImpl.Provider(ClassFileVersion.JAVA_V17);
+    private static final BytecodeProviderImpl PROVIDER = new org.hibernate.bytecode.internal.bytebuddy.BytecodeProviderImpl(
+            ClassFileVersion.JAVA_V17);
 
     //Choose this set to include Jakarta annotations, basic Java types such as String and Map, Hibernate annotations, and Panache supertypes:
     private static final CoreTypePool CORE_POOL = new CoreTypePool("jakarta.persistence.", "java.",
