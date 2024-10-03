@@ -12,11 +12,6 @@
     <artifactId>quarkus-hibernate-orm-deployment</artifactId>
     <name>Quarkus - Hibernate ORM - Deployment</name>
 
-    <properties>
-        <!-- FIXME: temporary setting to reproduce problems faster -->
-        <test>PublicFieldAccessInheritanceTest</test>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>io.quarkus</groupId>
