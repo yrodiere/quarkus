@@ -338,7 +338,7 @@ public interface HibernateSearchBackendElasticsearchRuntimeConfig {
          * Instead of setting this configuration property,
          * you can simply annotate your custom `IndexLayoutStrategy` implementation with `@SearchExtension`
          * and leave the configuration property unset: Hibernate Search will use the annotated implementation automatically.
-         * See xref:#plugging-in-custom-components[this section]
+         * See xref:{quarkus-hibernate-search-docs-path}#plugging-in-custom-components[this section]
          * for more information.
          *
          * If this configuration property is set, it takes precedence over any `@SearchExtension` annotation.

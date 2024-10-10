@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.hibernate.search.mapper.pojo.standalone.schema.management.SchemaManagementStrategyName;
 
 import io.quarkus.hibernate.search.backend.elasticsearch.runtime.HibernateSearchBackendElasticsearchRuntimeConfig;
+import io.quarkus.runtime.annotations.ConfigDocAttribute;
 import io.quarkus.runtime.annotations.ConfigDocDefault;
 import io.quarkus.runtime.annotations.ConfigDocMapKey;
 import io.quarkus.runtime.annotations.ConfigDocSection;
@@ -20,6 +21,8 @@ import io.smallrye.config.WithUnnamedKey;
 
 @ConfigMapping(prefix = "quarkus.hibernate-search-standalone")
 @ConfigRoot(phase = ConfigPhase.RUN_TIME)
+// Referenced in HibernateSearchBackendElasticsearchRuntimeConfig
+@ConfigDocAttribute(name = "quarkus-hibernate-search-docs-path", value = "hibernate-search-standalone-elasticsearch.adoc")
 public interface HibernateSearchStandaloneRuntimeConfig {
 
     /**

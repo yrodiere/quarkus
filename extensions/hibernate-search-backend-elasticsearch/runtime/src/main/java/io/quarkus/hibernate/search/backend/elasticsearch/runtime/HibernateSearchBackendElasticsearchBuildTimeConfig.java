@@ -97,12 +97,12 @@ public interface HibernateSearchBackendElasticsearchBuildTimeConfig {
     @ConfigGroup
     interface AnalysisConfig {
         /**
-         * One or more xref:#bean-reference-note-anchor[bean references]
+         * One or more xref:{quarkus-hibernate-search-docs-path}#bean-reference-note-anchor[bean references]
          * to the component(s) used to configure full text analysis (e.g. analyzers, normalizers).
          *
          * The referenced beans must implement `ElasticsearchAnalysisConfigurer`.
          *
-         * See xref:#analysis-configurer[Setting up the analyzers] for more
+         * See xref:{quarkus-hibernate-search-docs-path}#analysis-configurer[Setting up the analyzers] for more
          * information.
          *
          * [NOTE]
@@ -110,7 +110,7 @@ public interface HibernateSearchBackendElasticsearchBuildTimeConfig {
          * Instead of setting this configuration property,
          * you can simply annotate your custom `ElasticsearchAnalysisConfigurer` implementations with `@SearchExtension`
          * and leave the configuration property unset: Hibernate Search will use the annotated implementation automatically.
-         * See xref:#plugging-in-custom-components[this section]
+         * See xref:{quarkus-hibernate-search-docs-path}#plugging-in-custom-components[this section]
          * for more information.
          *
          * If this configuration property is set, it takes precedence over any `@SearchExtension` annotation.
