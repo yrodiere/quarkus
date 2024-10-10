@@ -3,6 +3,7 @@ package io.quarkus.agroal.test;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.quarkus.arc.Active;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
@@ -15,6 +16,8 @@ import io.quarkus.agroal.DataSource;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.InjectableInstance;
 import io.quarkus.test.QuarkusUnitTest;
+
+import java.util.List;
 
 /**
  * Tests a use case where multiple datasources are defined at build time,
@@ -73,23 +76,16 @@ public class MultipleDataSourcesAsAlternativesWithActiveDS1Test {
 
     private static class MyProducer {
         @Inject
-        @DataSource("ds-1")
-        InjectableInstance<AgroalDataSource> dataSource1Bean;
-
-        @Inject
-        @DataSource("ds-2")
-        InjectableInstance<AgroalDataSource> dataSource2Bean;
+        @Active
+        List<AgroalDataSource> activeDataSources;
 
         @Produces
         @ApplicationScoped
         public AgroalDataSource dataSource() {
-            if (dataSource1Bean.getHandle().getBean().isActive()) {
-                return dataSource1Bean.get();
-            } else if (dataSource2Bean.getHandle().getBean().isActive()) {
-                return dataSource2Bean.get();
-            } else {
-                throw new RuntimeException("No active datasource!");
+            if (activeDataSources.size() != 1) {
+                throw new IllegalStateException("Number of active datasources should be 1, was " + activeDataSources.size() + " instead");
             }
+            return activeDataSources.get(0);
         }
     }
 }

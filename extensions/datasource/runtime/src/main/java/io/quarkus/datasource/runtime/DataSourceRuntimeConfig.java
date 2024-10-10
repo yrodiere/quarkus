@@ -6,7 +6,6 @@ import io.quarkus.runtime.annotations.ConfigDocDefault;
 import io.quarkus.runtime.annotations.ConfigGroup;
 import io.quarkus.runtime.configuration.TrimmedStringConverter;
 import io.smallrye.config.WithConverter;
-import io.smallrye.config.WithDefault;
 
 @ConfigGroup
 public interface DataSourceRuntimeConfig {
