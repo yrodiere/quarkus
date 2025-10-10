@@ -26,6 +26,7 @@ public class OrmXmlQuarkusConfigImplicitFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
+                    .addClass(NameConverter.class)
                     .addAsResource("application.properties", "application.properties")
                     // META-INF/orm.xml should be picked up even if it's not mentioned explicitly.
                     .addAsManifestResource("META-INF/orm-simple.xml", "orm.xml"));
@@ -47,9 +48,11 @@ public class OrmXmlQuarkusConfigImplicitFileTest {
     @Test
     @Transactional
     public void smokeTest() {
+        NameConverter.reset();
         SmokeTestUtils.testSimplePersistRetrieveUpdateDelete(entityManager,
                 NonAnnotatedEntity.class, NonAnnotatedEntity::new,
                 NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
+        NameConverter.checkUsed();
     }
 
 }

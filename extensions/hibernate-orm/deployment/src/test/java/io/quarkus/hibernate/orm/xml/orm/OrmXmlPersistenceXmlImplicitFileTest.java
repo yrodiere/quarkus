@@ -27,6 +27,7 @@ public class OrmXmlPersistenceXmlImplicitFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
+                    .addClass(NameConverter.class)
                     .addAsResource("application-datasource-only.properties", "application.properties")
                     .addAsManifestResource("META-INF/persistence-mapping-file-implicit-orm-xml.xml", "persistence.xml")
                     // META-INF/orm.xml should be picked up even if it's not mentioned explicitly.
@@ -49,9 +50,11 @@ public class OrmXmlPersistenceXmlImplicitFileTest {
     @Test
     @Transactional
     public void smokeTest() {
+        NameConverter.reset();
         SmokeTestUtils.testSimplePersistRetrieveUpdateDelete(entityManager,
                 NonAnnotatedEntity.class, NonAnnotatedEntity::new,
                 NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
+        NameConverter.checkUsed();
     }
 
 }

@@ -26,6 +26,7 @@ public class OrmXmlQuarkusConfigExplicitFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
+                    .addClass(NameConverter.class)
                     .addAsResource("application-mapping-files-my-orm-xml.properties", "application.properties")
                     .addAsResource("META-INF/orm-simple.xml", "my-orm.xml"));
 
@@ -46,9 +47,11 @@ public class OrmXmlQuarkusConfigExplicitFileTest {
     @Test
     @Transactional
     public void smokeTest() {
+        NameConverter.reset();
         SmokeTestUtils.testSimplePersistRetrieveUpdateDelete(entityManager,
                 NonAnnotatedEntity.class, NonAnnotatedEntity::new,
                 NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
+        NameConverter.checkUsed();
     }
 
 }

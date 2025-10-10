@@ -26,6 +26,7 @@ public class OrmXmlPersistenceXmlExplicitFileTest {
                     .addClass(SmokeTestUtils.class)
                     .addClass(SchemaUtil.class)
                     .addClass(NonAnnotatedEntity.class)
+                    .addClass(NameConverter.class)
                     .addAsResource("application-datasource-only.properties", "application.properties")
                     .addAsManifestResource("META-INF/persistence-mapping-file-explicit-orm-xml.xml", "persistence.xml")
                     .addAsManifestResource("META-INF/orm-simple.xml", "my-orm.xml"));
@@ -47,9 +48,11 @@ public class OrmXmlPersistenceXmlExplicitFileTest {
     @Test
     @Transactional
     public void smokeTest() {
+        NameConverter.reset();
         SmokeTestUtils.testSimplePersistRetrieveUpdateDelete(entityManager,
                 NonAnnotatedEntity.class, NonAnnotatedEntity::new,
                 NonAnnotatedEntity::getId, NonAnnotatedEntity::setName, NonAnnotatedEntity::getName);
+        NameConverter.checkUsed();
     }
 
 }
