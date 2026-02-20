@@ -1,5 +1,6 @@
 package io.quarkus.hibernate.orm.deployment.dev;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -40,8 +41,16 @@ public class HibernateOrmDevServicesProcessor {
         for (Map.Entry<String, HibernateOrmConfigPersistenceUnit> entry : config.persistenceUnits()
                 .entrySet()) {
             Optional<String> dataSourceName = entry.getValue().datasource();
-            List<String> propertyKeysIndicatingDataSourceConfigured = DataSourceUtil
-                    .dataSourcePropertyKeys(dataSourceName.orElse(null), "username");
+            List<String> propertyKeysIndicatingDataSourceConfigured = new ArrayList<>();
+            // Oddly, the "additional config provider" gets called twice, the first time with username/password
+            // and the second time with URLs.
+            // We want to behave correctly in all cases.
+            propertyKeysIndicatingDataSourceConfigured
+                    .addAll(DataSourceUtil.dataSourcePropertyKeys(dataSourceName.orElse(null), "username"));
+            propertyKeysIndicatingDataSourceConfigured
+                    .addAll(DataSourceUtil.dataSourcePropertyKeys(dataSourceName.orElse(null), "reactive.url"));
+            propertyKeysIndicatingDataSourceConfigured
+                    .addAll(DataSourceUtil.dataSourcePropertyKeys(dataSourceName.orElse(null), "jdbc.url"));
 
             if (!managedSources.contains(dataSourceName.orElse(DataSourceUtil.DEFAULT_DATASOURCE_NAME))) {
                 String schemaManagementStrategyPropertyKey = HibernateOrmRuntimeConfig.puPropertyKey(entry.getKey(),
