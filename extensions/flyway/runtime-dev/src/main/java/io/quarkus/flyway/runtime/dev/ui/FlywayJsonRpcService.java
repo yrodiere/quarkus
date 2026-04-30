@@ -161,16 +161,6 @@ public class FlywayJsonRpcService {
                         }
                     }
                     CurrentConfig.EDITOR.accept(newConfig);
-                    // TODO ideally we'd force a scan here, but that fails because
-                    //  we end up closing the JsonRpcService that is currently executing...
-                    //  So for now we'll just rely on the next call to any API automatically triggering a restart.
-                    //  Note the line of code below has never actually worked since
-                    //  https://github.com/quarkusio/quarkus/commit/d68896ac48a0e4a6e95b60f3cb3af36e3bd98764#diff-b07030933573531c160a57f757c6949cb3d21dd4132f86656fac2e63413d24d8
-                    //  because:
-                    //  1. Adding a new Flyway file does not result in a restart; see https://github.com/quarkusio/quarkus/issues/25256
-                    //  2. The automatic addition of config was broken until the commit that commented out the line below.
-                    //  For ideas on how to fix this, see https://github.com/quarkusio/quarkus/pull/53884#discussion_r3162481517
-                    // DevConsoleManager.getHotReplacementContext().doScan(true);
                     return new FlywayActionResponse("success",
                             "Initial migration created, Flyway will now manage this datasource");
                 } catch (Throwable t) {

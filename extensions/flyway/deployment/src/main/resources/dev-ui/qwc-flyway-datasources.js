@@ -198,7 +198,7 @@ export class QwcFlywayDatasources extends QwcHotReloadElement {
             this._showResultNotification(jsonRpcResponse.result);
             this._selectedDs = null;
             this._createDialogOpened = false;
-            this.hotReload();
+            this.forceRestart("Restarting to apply Hibernate-generated migration scripts");
         });
     }
 
@@ -207,7 +207,7 @@ export class QwcFlywayDatasources extends QwcHotReloadElement {
             this._showResultNotification(jsonRpcResponse.result);
             this._selectedDs = null;
             this._updateDialogOpened = false;
-            this.hotReload();
+            this.forceRestart("Restarting to apply Hibernate-generated migration scripts");
         });
     }
 
