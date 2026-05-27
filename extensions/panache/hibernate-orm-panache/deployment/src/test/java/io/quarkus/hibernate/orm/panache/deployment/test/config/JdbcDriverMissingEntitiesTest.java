@@ -12,7 +12,7 @@ import io.quarkus.hibernate.orm.panache.deployment.test.MyEntity;
 import io.quarkus.maven.dependency.ArtifactKey;
 import io.quarkus.test.QuarkusExtensionTest;
 
-public class NoDatasourceTest {
+public class JdbcDriverMissingEntitiesTest {
 
     @RegisterExtension
     static QuarkusExtensionTest runner = new QuarkusExtensionTest()

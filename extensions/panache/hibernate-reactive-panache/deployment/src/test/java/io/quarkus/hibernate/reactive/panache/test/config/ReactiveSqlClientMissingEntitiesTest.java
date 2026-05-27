@@ -15,7 +15,7 @@ import io.quarkus.hibernate.reactive.panache.test.MyEntity;
 import io.quarkus.maven.dependency.ArtifactKey;
 import io.quarkus.test.QuarkusExtensionTest;
 
-public class NoDatasourceTest {
+public class ReactiveSqlClientMissingEntitiesTest {
 
     @RegisterExtension
     static QuarkusExtensionTest runner = new QuarkusExtensionTest()
