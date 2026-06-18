@@ -52,6 +52,7 @@ import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.pkg.builditem.CurateOutcomeBuildItem;
 import io.quarkus.reactive.datasource.deployment.VertxPoolBuildItem;
+import io.quarkus.reactive.datasource.spi.ReactiveDataSourceInjectableTypeBuildItem;
 import io.quarkus.reactive.datasource.runtime.DataSourceReactiveBuildTimeConfig;
 import io.quarkus.reactive.datasource.runtime.DataSourcesReactiveBuildTimeConfig;
 import io.quarkus.reactive.db2.client.DB2PoolCreator;
@@ -125,6 +126,13 @@ class ReactiveDB2ClientProcessor {
     @BuildStep
     DevServicesDatasourceConfigurationHandlerBuildItem devDbHandler() {
         return DevServicesDatasourceConfigurationHandlerBuildItem.reactive(DatabaseKind.DB2);
+    }
+
+    @BuildStep
+    void registerInjectableTypes(BuildProducer<ReactiveDataSourceInjectableTypeBuildItem> producer) {
+        producer.produce(new ReactiveDataSourceInjectableTypeBuildItem(VERTX_DB2_POOL));
+        producer.produce(new ReactiveDataSourceInjectableTypeBuildItem(
+                DotName.createSimple(io.vertx.mutiny.db2client.DB2Pool.class)));
     }
 
     @BuildStep

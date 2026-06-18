@@ -83,7 +83,8 @@ public abstract class DbKindResolverImpl implements DataSourceDbKindResolverBuil
 
         @Override
         public Optional<String> getOptional(String dataSourceName) {
-            return Optional.empty();
+            // If db-kind is explicitly configured, use it; otherwise we can't pick a default
+            return super.getOptional(dataSourceName);
         }
 
         @Override

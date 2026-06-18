@@ -53,6 +53,7 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageConfigBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.pkg.builditem.CurateOutcomeBuildItem;
 import io.quarkus.reactive.datasource.deployment.VertxPoolBuildItem;
+import io.quarkus.reactive.datasource.spi.ReactiveDataSourceInjectableTypeBuildItem;
 import io.quarkus.reactive.datasource.runtime.DataSourceReactiveBuildTimeConfig;
 import io.quarkus.reactive.datasource.runtime.DataSourcesReactiveBuildTimeConfig;
 import io.quarkus.reactive.pg.client.PgPoolCreator;
@@ -84,6 +85,13 @@ class ReactivePgClientProcessor {
     @BuildStep
     DevServicesDatasourceConfigurationHandlerBuildItem devDbHandler() {
         return DevServicesDatasourceConfigurationHandlerBuildItem.reactive(DatabaseKind.POSTGRESQL);
+    }
+
+    @BuildStep
+    void registerInjectableTypes(BuildProducer<ReactiveDataSourceInjectableTypeBuildItem> producer) {
+        producer.produce(new ReactiveDataSourceInjectableTypeBuildItem(VERTX_PG_POOL));
+        producer.produce(
+                new ReactiveDataSourceInjectableTypeBuildItem(DotName.createSimple(io.vertx.mutiny.pgclient.PgPool.class)));
     }
 
     @BuildStep
