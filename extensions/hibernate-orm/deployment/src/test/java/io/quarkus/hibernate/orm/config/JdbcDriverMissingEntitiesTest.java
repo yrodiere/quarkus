@@ -28,9 +28,9 @@ public class JdbcDriverMissingEntitiesTest {
                     ArtifactKey.of("io.quarkus", "quarkus-jdbc-h2-deployment")))
             .assertException(t -> assertThat(t)
                     .hasMessageContainingAll(
-                            "Persistence unit '<default>' defines entities",
-                            "its datasource '<default>' cannot be found",
-                            "Datasource '<default>' is not configured"));
+                            "Hibernate ORM persistence unit '<default>' cannot be created",
+                            "JDBC datasource '<default>' cannot be created",
+                            "No default db-kind is available"));
 
     @Test
     public void test() {

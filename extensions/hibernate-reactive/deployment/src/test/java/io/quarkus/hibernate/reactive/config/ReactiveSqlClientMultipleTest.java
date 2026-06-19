@@ -36,8 +36,9 @@ public class ReactiveSqlClientMultipleTest {
             .overrideConfigKey("quarkus.devservices.enabled", "false")
             .assertException(t -> assertThat(t)
                     .hasMessageContainingAll(
-                            "datasource '<default>' cannot be found",
-                            "Datasource '<default>' is not configured"));
+                            "persistence unit '<default>' cannot be created",
+                            "Reactive datasource '<default>' cannot be created",
+                            "Multiple db-kinds are available"));
 
     @Test
     public void test() {

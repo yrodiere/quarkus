@@ -20,11 +20,34 @@ import io.quarkus.hibernate.envers.runtime.graal.DisableLoggingFeature;
 import io.quarkus.hibernate.orm.deployment.PersistenceUnitDescriptorBuildItem;
 import io.quarkus.hibernate.orm.deployment.integration.HibernateOrmIntegrationStaticConfiguredBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.AdditionalJpaModelBuildItem;
+import io.quarkus.hibernate.orm.deployment.spi.PersistenceUnitRequestBuildItem;
+import io.quarkus.hibernate.orm.runtime.PersistenceUnitUtil;
+import io.quarkus.runtime.util.ProgrammingParadigm;
 
 @BuildSteps(onlyIf = HibernateEnversEnabled.class)
 public final class HibernateEnversProcessor {
 
     static final String HIBERNATE_ENVERS = "Hibernate Envers";
+
+    @BuildStep
+    void collectImplicitPersistenceUnitRequests(HibernateEnversBuildTimeConfig config,
+            BuildProducer<PersistenceUnitRequestBuildItem> puRequests) {
+        for (String name : config.persistenceUnits().keySet()) {
+            // TODO remove when this gets fixed: https://github.com/smallrye/smallrye-config/pull/1534
+            //   For now, since we can't trust keySet for the default datasource, we'll ignore it.
+            if (PersistenceUnitUtil.isDefaultPersistenceUnit(name)) {
+                continue;
+            }
+
+            puRequests.produce(new PersistenceUnitRequestBuildItem(name, ProgrammingParadigm.BLOCKING,
+                    String.format("Configuration '%s'", HibernateEnversBuildTimeConfig.persistenceUnitPropertyKey(name, "*"))));
+        }
+
+        // We don't derive requests from injection points of Search related beans,
+        // because those could just be referencing custom beans,
+        // as we suggest in https://quarkus.io/guides/hibernate-orm#persistence-unit-active
+        // TODO find a way to collect injection points for a given PU that have no matching user-defined producer? Maybe BeanDiscoveryFinishedBuildItem
+    }
 
     @BuildStep
     List<AdditionalJpaModelBuildItem> addJpaModelClasses() {
