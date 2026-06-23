@@ -74,6 +74,7 @@ import io.quarkus.agroal.spi.JdbcDataSourceSchemaReadyBuildItem;
 import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.arc.deployment.BeanContainerListenerBuildItem;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
+import io.quarkus.arc.deployment.BeanDiscoveryInjectionPointsBuildItem;
 import io.quarkus.arc.deployment.InjectionPointScanningUtil;
 import io.quarkus.arc.deployment.RecorderBeanInitializedBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
@@ -460,9 +461,10 @@ public final class HibernateOrmProcessor {
     @BuildStep
     void collectBlockingPersistenceUnitRequestsFromInjection(
             BeanDiscoveryFinishedBuildItem beanDiscovery,
+            BeanDiscoveryInjectionPointsBuildItem injectionPointIndex,
             BuildProducer<PersistenceUnitRequestBuildItem> puRequests) {
         InjectionPointScanningUtil.collectUnsatisfiedInjectionPoints(
-                beanDiscovery,
+                beanDiscovery, injectionPointIndex,
                 HibernateOrmCdiProcessor.ALL_INJECTABLE_TYPES,
                 List.of(ClassNames.QUARKUS_PERSISTENCE_UNIT, DotNames.NAMED),
                 PersistenceUnitUtil.DEFAULT_PERSISTENCE_UNIT_NAME,
