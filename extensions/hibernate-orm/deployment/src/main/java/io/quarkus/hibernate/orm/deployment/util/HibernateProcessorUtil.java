@@ -103,12 +103,6 @@ public final class HibernateProcessorUtil {
         LOG.debugf("Collecting implicit %s persistence unit requests from configuration: keySet = %s",
                 paradigm, config.persistenceUnits().keySet());
         for (String name : config.persistenceUnits().keySet()) {
-            // TODO remove when this gets fixed: https://github.com/smallrye/smallrye-config/pull/1534
-            //   For now, since we can't trust keySet for the default datasource, we're using isAnyPropertySet() as a workaround.
-            if (PersistenceUnitUtil.isDefaultPersistenceUnit(name)
-                    && !config.persistenceUnits().get(name).isAnyPropertySet()) {
-                continue;
-            }
             if (ProgrammingParadigm.BLOCKING.equals(paradigm) && !config.blocking()) {
                 // Explicitly disabled
                 continue;

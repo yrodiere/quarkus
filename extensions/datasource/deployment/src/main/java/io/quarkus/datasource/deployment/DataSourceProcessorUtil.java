@@ -32,7 +32,6 @@ public class DataSourceProcessorUtil {
 
     public static void collectImplicitDataSourceRequestsFromConfiguration(
             ProgrammingParadigm paradigm,
-            DataSourcesBuildTimeConfig dsConfig,
             Set<String> keySet,
             Predicate<String> enabled,
             String radicalWildcard,
@@ -40,12 +39,6 @@ public class DataSourceProcessorUtil {
         LOG.debugf("Collecting implicit %s datasource requests from configuration '%s': keySet = %s",
                 paradigm, radicalWildcard, keySet);
         for (String name : keySet) {
-            // TODO remove when this gets fixed: https://github.com/smallrye/smallrye-config/pull/1534
-            //   For now, since we can't trust keySet for the default datasource, we skip it
-            //   unless db-kind is explicitly configured.
-            if (DataSourceUtil.isDefault(name) && dsConfig.dataSources().get(name).dbKind().isEmpty()) {
-                continue;
-            }
             if (!enabled.test(name)) {
                 // Explicitly disabled
                 continue;

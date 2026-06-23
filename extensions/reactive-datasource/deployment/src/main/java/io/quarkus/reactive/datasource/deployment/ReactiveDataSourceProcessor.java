@@ -65,10 +65,10 @@ class ReactiveDataSourceProcessor {
             BuildProducer<DataSourceRequestBuildItem> dataSourceRequests) {
         Predicate<String> enabled = name -> reactiveConfig.dataSources().get(name).reactive().enabled();
         DataSourceProcessorUtil.collectImplicitDataSourceRequestsFromConfiguration(
-                ProgrammingParadigm.REACTIVE, config, config.dataSources().keySet(), enabled,
+                ProgrammingParadigm.REACTIVE, config.dataSources().keySet(), enabled,
                 "*", dataSourceRequests);
         DataSourceProcessorUtil.collectImplicitDataSourceRequestsFromConfiguration(
-                ProgrammingParadigm.REACTIVE, config, reactiveConfig.dataSources().keySet(), enabled,
+                ProgrammingParadigm.REACTIVE, reactiveConfig.dataSources().keySet(), enabled,
                 "reactive.*", dataSourceRequests);
 
     }

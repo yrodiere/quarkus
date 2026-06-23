@@ -133,10 +133,10 @@ class AgroalProcessor {
             BuildProducer<DataSourceRequestBuildItem> dataSourceRequests) {
         Predicate<String> enabled = name -> jdbcConfig.dataSources().get(name).jdbc().enabled();
         DataSourceProcessorUtil.collectImplicitDataSourceRequestsFromConfiguration(
-                ProgrammingParadigm.BLOCKING, config, config.dataSources().keySet(), enabled,
+                ProgrammingParadigm.BLOCKING, config.dataSources().keySet(), enabled,
                 "*", dataSourceRequests);
         DataSourceProcessorUtil.collectImplicitDataSourceRequestsFromConfiguration(
-                ProgrammingParadigm.BLOCKING, config, jdbcConfig.dataSources().keySet(), enabled,
+                ProgrammingParadigm.BLOCKING, jdbcConfig.dataSources().keySet(), enabled,
                 "jdbc.*", dataSourceRequests);
 
     }
