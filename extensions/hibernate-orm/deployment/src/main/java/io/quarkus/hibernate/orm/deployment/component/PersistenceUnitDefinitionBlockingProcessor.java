@@ -13,7 +13,6 @@ import io.quarkus.hibernate.orm.deployment.HibernateOrmEnabled;
 import io.quarkus.hibernate.orm.deployment.JpaModelPerPersistenceUnitBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceXmlDescriptorBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.AdditionalPersistenceUnitBuildItem;
-import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientDefinedBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientRequestBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitLookupBuildItem;
@@ -62,13 +61,12 @@ class PersistenceUnitDefinitionBlockingProcessor {
             List<PersistenceUnitRequestBuildItem> puRequests,
             List<PersistenceXmlDescriptorBuildItem> persistenceXmlDescriptors,
             List<AdditionalPersistenceUnitBuildItem> additionalPersistenceUnits,
-            List<HibernateOrmClientDefinedBuildItem> definedClients,
             BuildProducer<PersistenceUnitDefinitionBuildItem> persistenceUnitDefinitions) {
         PersistenceUnitDefinitionSupport.definePersistenceUnits(ProgrammingParadigm.BLOCKING, hibernateOrmConfig,
                 lookupBuildItem, dataSourceLookupBuildItem.getLookup(),
                 clientLookupBuildItem.getLookup(),
                 puRequests, persistenceXmlDescriptors, additionalPersistenceUnits,
-                definedClients, persistenceUnitDefinitions);
+                persistenceUnitDefinitions);
     }
 
     @BuildStep

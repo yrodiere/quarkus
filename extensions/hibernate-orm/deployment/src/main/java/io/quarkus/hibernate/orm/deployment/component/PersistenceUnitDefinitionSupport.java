@@ -23,7 +23,6 @@ import io.quarkus.hibernate.orm.deployment.HibernateOrmConfigPersistenceUnit;
 import io.quarkus.hibernate.orm.deployment.JpaModelPerPersistenceUnitBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceXmlDescriptorBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.AdditionalPersistenceUnitBuildItem;
-import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientDefinedBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitRequestBuildItem;
 import io.quarkus.hibernate.orm.deployment.util.HibernateProcessorUtil;
@@ -124,18 +123,12 @@ public final class PersistenceUnitDefinitionSupport {
             List<PersistenceUnitRequestBuildItem> puRequests,
             List<PersistenceXmlDescriptorBuildItem> persistenceXmlDescriptors,
             List<AdditionalPersistenceUnitBuildItem> additionalPersistenceUnits,
-            List<HibernateOrmClientDefinedBuildItem> definedClients,
             BuildProducer<PersistenceUnitDefinitionBuildItem> persistenceUnitDefinitions) {
         if (!persistenceXmlDescriptors.isEmpty()) {
             // When using persistence.xml, this entire infrastructure gets bypassed.
             // See also checks that prevent using persistence.xml and Quarkus config at the same time
             // in HibernateOrmProcessor.
             return;
-        }
-
-        Map<String, HibernateOrmClientDefinedBuildItem> clientsByName = new LinkedHashMap<>();
-        for (HibernateOrmClientDefinedBuildItem client : definedClients) {
-            clientsByName.put(client.getName(), client);
         }
 
         // Collect all relevant persistence unit names that are referenced, with their reasons
@@ -184,7 +177,7 @@ public final class PersistenceUnitDefinitionSupport {
         }
 
         // For PUs that should use a client (explicitly configured or implicitly resolved),
-        // look up the matching client and synthesize an AdditionalConfig.
+        // resolve the client name. Client existence is checked later, similar to datasources.
         Map<String, String> resolvedClientNames = new HashMap<>();
         for (var entry : puNamesWithReasons.entrySet()) {
             String puName = entry.getKey();
@@ -193,23 +186,7 @@ public final class PersistenceUnitDefinitionSupport {
             }
             String clientName = getEffectiveClientName(config, puName, dataSourceLookup, clientLookup);
             if (clientName != null) {
-                HibernateOrmClientDefinedBuildItem client = clientsByName.get(clientName);
-                if (client == null) {
-                    throw new ConfigurationException(String.format(Locale.ROOT,
-                            "Persistence unit '%s' is configured with '%s',"
-                                    + " but no client extension can handle client '%s'."
-                                    + " Add an extension that provides this client"
-                                    + " (e.g. quarkus-mongodb-hibernate).",
-                            puName, HibernateOrmRuntimeConfig.puPropertyKey(puName, "client"),
-                            clientName));
-                }
                 resolvedClientNames.put(puName, clientName);
-                additionalConfigs.put(puName,
-                        new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
-                                Optional.empty(),
-                                Optional.of(client.getDialectClass()),
-                                client.getProperties(),
-                                true));
             }
         }
 
@@ -244,6 +221,8 @@ public final class PersistenceUnitDefinitionSupport {
             PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig = additionalConfigs.get(puName);
             Optional<String> dataSourceName;
             if (additionalConfig != null && additionalConfig.selfManagedConnection()) {
+                dataSourceName = Optional.empty();
+            } else if (resolvedClientNames.containsKey(puName)) {
                 dataSourceName = Optional.empty();
             } else if (additionalConfig != null) {
                 dataSourceName = additionalConfig.dataSourceName()

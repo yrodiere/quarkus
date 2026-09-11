@@ -62,7 +62,7 @@ class PersistenceUnitDefinitionReactiveProcessor {
             BuildProducer<PersistenceUnitDefinitionBuildItem> persistenceUnitDefinitions) {
         PersistenceUnitDefinitionSupport.definePersistenceUnits(ProgrammingParadigm.REACTIVE, hibernateOrmConfig,
                 lookupBuildItem, dataSourceLookupBuildItem.getLookup(), clientLookupBuildItem.getLookup(),
-                puRequests, List.of(), List.of(), List.of(), persistenceUnitDefinitions);
+                puRequests, List.of(), List.of(), persistenceUnitDefinitions);
     }
 
     @BuildStep
