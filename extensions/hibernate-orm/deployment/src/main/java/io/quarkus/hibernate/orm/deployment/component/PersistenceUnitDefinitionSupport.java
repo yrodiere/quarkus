@@ -13,14 +13,17 @@ import java.util.stream.Collectors;
 
 import org.jboss.logging.Logger;
 
+import io.quarkus.datasource.common.runtime.DataSourceUtil;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
+import io.quarkus.deployment.component.ComponentLookup;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmConfig;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmConfigPersistenceUnit;
 import io.quarkus.hibernate.orm.deployment.JpaModelPerPersistenceUnitBuildItem;
 import io.quarkus.hibernate.orm.deployment.PersistenceXmlDescriptorBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.AdditionalPersistenceUnitBuildItem;
+import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientDefinedBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitRequestBuildItem;
 import io.quarkus.hibernate.orm.deployment.util.HibernateProcessorUtil;
@@ -116,15 +119,23 @@ public final class PersistenceUnitDefinitionSupport {
     public static void definePersistenceUnits(ProgrammingParadigm paradigm,
             HibernateOrmConfig config,
             PersistenceUnitLookupBuildItem lookupBuildItem,
+            ComponentLookup dataSourceLookup,
+            ComponentLookup clientLookup,
             List<PersistenceUnitRequestBuildItem> puRequests,
             List<PersistenceXmlDescriptorBuildItem> persistenceXmlDescriptors,
             List<AdditionalPersistenceUnitBuildItem> additionalPersistenceUnits,
+            List<HibernateOrmClientDefinedBuildItem> definedClients,
             BuildProducer<PersistenceUnitDefinitionBuildItem> persistenceUnitDefinitions) {
         if (!persistenceXmlDescriptors.isEmpty()) {
             // When using persistence.xml, this entire infrastructure gets bypassed.
             // See also checks that prevent using persistence.xml and Quarkus config at the same time
             // in HibernateOrmProcessor.
             return;
+        }
+
+        Map<String, HibernateOrmClientDefinedBuildItem> clientsByName = new LinkedHashMap<>();
+        for (HibernateOrmClientDefinedBuildItem client : definedClients) {
+            clientsByName.put(client.getName(), client);
         }
 
         // Collect all relevant persistence unit names that are referenced, with their reasons
@@ -164,10 +175,41 @@ public final class PersistenceUnitDefinitionSupport {
             var previous = additionalConfigs.put(puName,
                     new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
                             item.getDataSourceName(),
-                            item.getExplicitDialect(), item.getProperties()));
+                            item.getExplicitDialect(), item.getProperties(),
+                            false));
             if (previous != null) {
                 throw new IllegalStateException("Multiple " + AdditionalPersistenceUnitBuildItem.class.getSimpleName()
                         + " for persistence unit '" + puName + "'");
+            }
+        }
+
+        // For PUs that should use a client (explicitly configured or implicitly resolved),
+        // look up the matching client and synthesize an AdditionalConfig.
+        Map<String, String> resolvedClientNames = new HashMap<>();
+        for (var entry : puNamesWithReasons.entrySet()) {
+            String puName = entry.getKey();
+            if (additionalConfigs.containsKey(puName)) {
+                continue;
+            }
+            String clientName = getEffectiveClientName(config, puName, dataSourceLookup, clientLookup);
+            if (clientName != null) {
+                HibernateOrmClientDefinedBuildItem client = clientsByName.get(clientName);
+                if (client == null) {
+                    throw new ConfigurationException(String.format(Locale.ROOT,
+                            "Persistence unit '%s' is configured with '%s',"
+                                    + " but no client extension can handle client '%s'."
+                                    + " Add an extension that provides this client"
+                                    + " (e.g. quarkus-mongodb-hibernate).",
+                            puName, HibernateOrmRuntimeConfig.puPropertyKey(puName, "client"),
+                            clientName));
+                }
+                resolvedClientNames.put(puName, clientName);
+                additionalConfigs.put(puName,
+                        new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
+                                Optional.empty(),
+                                Optional.of(client.getDialectClass()),
+                                client.getProperties(),
+                                true));
             }
         }
 
@@ -200,15 +242,62 @@ public final class PersistenceUnitDefinitionSupport {
             }
 
             PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig = additionalConfigs.get(puName);
-            Optional<String> dataSourceName = additionalConfig != null
-                    ? additionalConfig.dataSourceName().or(() -> HibernateProcessorUtil.getDataSourceName(config, puName))
-                    : HibernateProcessorUtil.getDataSourceName(config, puName);
+            Optional<String> dataSourceName;
+            if (additionalConfig != null && additionalConfig.selfManagedConnection()) {
+                dataSourceName = Optional.empty();
+            } else if (additionalConfig != null) {
+                dataSourceName = additionalConfig.dataSourceName()
+                        .or(() -> HibernateProcessorUtil.getDataSourceName(config, puName));
+            } else {
+                dataSourceName = HibernateProcessorUtil.getDataSourceName(config, puName);
+            }
             persistenceUnitDefinitions.produce(new PersistenceUnitDefinitionBuildItem(puName, paradigm,
                     entry.getValue(),
                     config.persistenceUnits().get(puName),
                     dataSourceName,
+                    Optional.ofNullable(resolvedClientNames.get(puName)),
                     Optional.ofNullable(additionalConfigs.get(puName))));
         }
+    }
+
+    /**
+     * Determines the effective client name for a persistence unit, mirroring how
+     * {@link HibernateProcessorUtil#getDataSourceName} resolves the datasource name.
+     * <p>
+     * Resolution order:
+     * <ol>
+     * <li>Explicit {@code client} config property</li>
+     * <li>For the default PU with no explicit datasource: fall back to the default client
+     * if the implicit default datasource is unavailable</li>
+     * </ol>
+     *
+     * @return the client name, or {@code null} if no client should be used
+     */
+    static String getEffectiveClientName(HibernateOrmConfig config, String puName, ComponentLookup dataSourceLookup,
+            ComponentLookup clientLookup) {
+        HibernateOrmConfigPersistenceUnit puConfig = config.persistenceUnits().get(puName);
+        // Explicit client
+        if (puConfig != null && puConfig.client().isPresent()) {
+            return puConfig.client().get();
+        }
+        // Implicit default: only for the default PU with no explicit datasource
+        if (!PersistenceUnitUtil.isDefaultPersistenceUnit(puName)) {
+            return null;
+        }
+        if (puConfig != null && puConfig.datasource().isPresent()) {
+            return null;
+        }
+        // Check if the implicit default datasource is available
+        if (dataSourceLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                ProgrammingParadigm.BLOCKING).isEmpty()) {
+            return null;
+        }
+        // Default datasource unavailable — use the default client if available
+        if (clientLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                ProgrammingParadigm.BLOCKING).isEmpty()) {
+            return DataSourceUtil.DEFAULT_DATASOURCE_NAME;
+        }
+        return null;
     }
 
     private static boolean isExplicitlyDisabled(ProgrammingParadigm paradigm, String puName, HibernateOrmConfig config) {

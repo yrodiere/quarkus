@@ -1147,10 +1147,12 @@ public final class HibernateOrmProcessor {
         Optional<String> explicitDialect = additionalPuConfig
                 .flatMap(PersistenceUnitDefinitionBuildItem.AdditionalConfig::explicitDialect)
                 .or(() -> persistenceUnitConfig.dialect().dialect());
+        boolean selfManagedConnection = additionalPuConfig
+                .map(PersistenceUnitDefinitionBuildItem.AdditionalConfig::selfManagedConnection).orElse(false);
         Optional<DatabaseKind.SupportedDatabaseKind> supportedDatabaseKind = collectDialectConfig(persistenceUnitName,
                 persistenceUnitConfig,
                 dbKindMetadataBuildItems, jdbcDataSource, multiTenancyStrategy,
-                explicitDialect,
+                explicitDialect, selfManagedConnection,
                 reflectiveMethods, descriptor.getProperties()::setProperty);
 
         configureProperties(descriptor, persistenceUnitConfig, hibernateOrmConfig, false);
@@ -1190,6 +1192,7 @@ public final class HibernateOrmProcessor {
             Optional<JdbcDataSourceBuildItem> jdbcDataSource,
             MultiTenancyStrategy multiTenancyStrategy,
             Optional<String> dialect,
+            boolean selfManagedConnection,
             BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
             BiConsumer<String, String> puPropertiesCollector) {
         final HibernateOrmConfigPersistenceUnit.HibernateOrmConfigPersistenceUnitDialect dialectConfig = persistenceUnitConfig
@@ -1197,7 +1200,7 @@ public final class HibernateOrmProcessor {
 
         Optional<String> dbKind = jdbcDataSource.map(JdbcDataSourceBuildItem::getDbKind);
         Optional<String> dbVersion = jdbcDataSource.flatMap(JdbcDataSourceBuildItem::getDbVersion);
-        if (multiTenancyStrategy != MultiTenancyStrategy.DATABASE && jdbcDataSource.isEmpty()) {
+        if (multiTenancyStrategy != MultiTenancyStrategy.DATABASE && jdbcDataSource.isEmpty() && !selfManagedConnection) {
             String dsConfigProperty = HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitName, "datasource");
             throw new ConfigurationException(String.format(Locale.ROOT,
                     "Datasource must be defined for persistence unit '%s'. Setting the datasource for the persistence unit can be done via the '%s' property. "

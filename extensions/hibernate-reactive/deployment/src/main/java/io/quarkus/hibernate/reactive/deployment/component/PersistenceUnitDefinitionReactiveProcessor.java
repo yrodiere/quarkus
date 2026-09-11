@@ -2,6 +2,7 @@ package io.quarkus.hibernate.reactive.deployment.component;
 
 import java.util.List;
 
+import io.quarkus.datasource.deployment.spi.component.DataSourceLookupBuildItem;
 import io.quarkus.datasource.deployment.spi.component.DataSourceRequestBuildItem;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -11,6 +12,7 @@ import io.quarkus.hibernate.orm.deployment.HibernateOrmConfig;
 import io.quarkus.hibernate.orm.deployment.JpaModelPerPersistenceUnitBuildItem;
 import io.quarkus.hibernate.orm.deployment.component.PersistenceUnitDefinitionBuildItem;
 import io.quarkus.hibernate.orm.deployment.component.PersistenceUnitDefinitionSupport;
+import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitRequestBuildItem;
 import io.quarkus.hibernate.reactive.deployment.HibernateReactiveEnabled;
@@ -54,11 +56,13 @@ class PersistenceUnitDefinitionReactiveProcessor {
     void defineReactivePersistenceUnits(
             HibernateOrmConfig hibernateOrmConfig,
             PersistenceUnitLookupBuildItem lookupBuildItem,
+            DataSourceLookupBuildItem dataSourceLookupBuildItem,
+            HibernateOrmClientLookupBuildItem clientLookupBuildItem,
             List<PersistenceUnitRequestBuildItem> puRequests,
             BuildProducer<PersistenceUnitDefinitionBuildItem> persistenceUnitDefinitions) {
         PersistenceUnitDefinitionSupport.definePersistenceUnits(ProgrammingParadigm.REACTIVE, hibernateOrmConfig,
-                lookupBuildItem,
-                puRequests, List.of(), List.of(), persistenceUnitDefinitions);
+                lookupBuildItem, dataSourceLookupBuildItem.getLookup(), clientLookupBuildItem.getLookup(),
+                puRequests, List.of(), List.of(), List.of(), persistenceUnitDefinitions);
     }
 
     @BuildStep
