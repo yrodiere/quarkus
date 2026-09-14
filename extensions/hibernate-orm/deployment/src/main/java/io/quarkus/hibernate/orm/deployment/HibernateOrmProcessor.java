@@ -1086,9 +1086,9 @@ public final class HibernateOrmProcessor {
             BuildProducer<PersistenceUnitDescriptorBuildItem> persistenceUnitDescriptors,
             BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
             List<DatabaseKindDialectBuildItem> dbKindMetadataBuildItems) {
-        Map<String, HibernateOrmClientDefinedBuildItem> clientsByName = new LinkedHashMap<>();
+        Map<String, List<HibernateOrmClientDefinedBuildItem>> clientsByName = new LinkedHashMap<>();
         for (HibernateOrmClientDefinedBuildItem client : definedClients) {
-            clientsByName.put(client.getName(), client);
+            clientsByName.computeIfAbsent(client.getName(), k -> new ArrayList<>()).add(client);
         }
         for (PersistenceUnitDefinitionBuildItem puDefinition : persistenceUnitDefinitions) {
             if (puDefinition.getParadigm() != ProgrammingParadigm.BLOCKING) {
@@ -1112,7 +1112,7 @@ public final class HibernateOrmProcessor {
             HibernateOrmConfig hibernateOrmConfig,
             PersistenceUnitDefinitionBuildItem puDefinition,
             JpaPersistenceUnitModel model,
-            Map<String, HibernateOrmClientDefinedBuildItem> clientsByName,
+            Map<String, List<HibernateOrmClientDefinedBuildItem>> clientsByName,
             List<JdbcDataSourceBuildItem> jdbcDataSources,
             ApplicationArchivesBuildItem applicationArchivesBuildItem,
             LaunchMode launchMode,
@@ -1130,8 +1130,8 @@ public final class HibernateOrmProcessor {
         // For client-backed PUs, resolve the client and synthesize an AdditionalConfig
         if (puDefinition.getClientName().isPresent() && additionalPuConfig.isEmpty()) {
             String clientName = puDefinition.getClientName().get();
-            HibernateOrmClientDefinedBuildItem client = clientsByName.get(clientName);
-            if (client == null) {
+            List<HibernateOrmClientDefinedBuildItem> clients = clientsByName.get(clientName);
+            if (clients == null || clients.isEmpty()) {
                 throw new ConfigurationException(String.format(Locale.ROOT,
                         "Persistence unit '%s' is configured with '%s',"
                                 + " but no client extension can handle client '%s'."
@@ -1141,6 +1141,16 @@ public final class HibernateOrmProcessor {
                         HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitName, "client"),
                         clientName));
             }
+            if (clients.size() > 1) {
+                throw new ConfigurationException(String.format(Locale.ROOT,
+                        "Persistence unit '%s' is configured with '%s',"
+                                + " but multiple client extensions can handle client '%s'."
+                                + " Make sure only one extension provides this client.",
+                        persistenceUnitName,
+                        HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitName, "client"),
+                        clientName));
+            }
+            HibernateOrmClientDefinedBuildItem client = clients.get(0);
             additionalPuConfig = Optional.of(new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
                     Optional.empty(),
                     Optional.of(client.getDialectClass()),

@@ -1,5 +1,6 @@
 package io.quarkus.hibernate.orm.deployment.dev;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,9 +42,9 @@ public class HibernateOrmDevServicesProcessor {
         Set<String> managedSources = schemaReadyBuildItems.stream().map(JdbcDataSourceSchemaReadyBuildItem::getDatasourceNames)
                 .collect(HashSet::new, Collection::addAll, Collection::addAll);
 
-        Map<String, HibernateOrmClientDefinedBuildItem> clientsByName = new LinkedHashMap<>();
+        Map<String, List<HibernateOrmClientDefinedBuildItem>> clientsByName = new LinkedHashMap<>();
         for (HibernateOrmClientDefinedBuildItem client : definedClients) {
-            clientsByName.put(client.getName(), client);
+            clientsByName.computeIfAbsent(client.getName(), k -> new ArrayList<>()).add(client);
         }
 
         for (PersistenceUnitDefinedBuildItem pu : definedPersistenceUnits) {
@@ -54,6 +55,8 @@ public class HibernateOrmDevServicesProcessor {
             if (pu.getDataSourceName().isEmpty()) {
                 boolean clientDevServicesEnabled = pu.getClientName()
                         .map(clientsByName::get)
+                        .filter(clients -> clients.size() == 1)
+                        .map(clients -> clients.get(0))
                         .map(HibernateOrmClientDefinedBuildItem::isDevServicesEnabled)
                         .orElse(false);
                 if (clientDevServicesEnabled
