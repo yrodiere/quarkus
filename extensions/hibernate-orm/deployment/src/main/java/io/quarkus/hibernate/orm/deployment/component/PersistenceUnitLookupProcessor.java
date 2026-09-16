@@ -105,7 +105,8 @@ class PersistenceUnitLookupProcessor {
                 .findFirst();
         PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig = additionalPu
                 .map(item -> new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
-                        item.getDataSourceName(), item.getExplicitDialect(), item.getProperties()))
+                        item.getDataSourceName(), item.getClientName(),
+                        item.getExplicitDialect(), item.getProperties()))
                 .orElse(null);
 
         var backend = PersistenceUnitDefinitionSupport.resolveBackend(

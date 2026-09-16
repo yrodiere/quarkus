@@ -77,6 +77,7 @@ public final class PersistenceUnitDefinitionBuildItem extends MultiBuildItem {
      */
     public record AdditionalConfig(
             Optional<String> dataSourceName,
+            Optional<String> clientName,
             Optional<String> explicitDialect,
             Map<String, String> properties) {
     }

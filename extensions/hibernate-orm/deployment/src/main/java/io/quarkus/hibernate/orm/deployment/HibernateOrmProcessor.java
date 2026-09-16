@@ -1129,14 +1129,24 @@ public final class HibernateOrmProcessor {
         HibernateOrmConfigPersistenceUnit persistenceUnitConfig = puDefinition.getConfig();
         Optional<PersistenceUnitDefinitionBuildItem.AdditionalConfig> additionalPuConfig = puDefinition.getAdditionalConfig();
 
-        // For client-backed PUs, resolve the client and synthesize an AdditionalConfig
-        if (puDefinition.getClientName().isPresent() && additionalPuConfig.isEmpty()) {
+        // For client-backed PUs, resolve the client and merge its dialect/properties into the AdditionalConfig
+        if (puDefinition.getClientName().isPresent()) {
             HibernateOrmClientDefinedBuildItem client = HibernateProcessorUtil.findClientWithName(
                     persistenceUnitName, puDefinition.getClientName().get(), clientsByName);
-            additionalPuConfig = Optional.of(new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
-                    Optional.empty(),
-                    Optional.of(client.getDialectClass()),
-                    client.getProperties()));
+            if (additionalPuConfig.isEmpty()) {
+                additionalPuConfig = Optional.of(new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
+                        Optional.empty(), Optional.empty(),
+                        Optional.of(client.getDialectClass()),
+                        client.getProperties()));
+            } else {
+                var existing = additionalPuConfig.get();
+                var mergedProps = new java.util.LinkedHashMap<>(client.getProperties());
+                mergedProps.putAll(existing.properties());
+                additionalPuConfig = Optional.of(new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
+                        existing.dataSourceName(), existing.clientName(),
+                        existing.explicitDialect().or(() -> Optional.of(client.getDialectClass())),
+                        mergedProps));
+            }
         }
 
         Optional<String> dataSourceName = puDefinition.getDataSourceName();

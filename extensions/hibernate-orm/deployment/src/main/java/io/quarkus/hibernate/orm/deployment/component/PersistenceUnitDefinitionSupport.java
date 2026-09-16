@@ -167,7 +167,7 @@ public final class PersistenceUnitDefinitionSupport {
                     .add(item.getReason());
             var previous = additionalConfigs.put(puName,
                     new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
-                            item.getDataSourceName(),
+                            item.getDataSourceName(), item.getClientName(),
                             item.getExplicitDialect(), item.getProperties()));
             if (previous != null) {
                 throw new IllegalStateException("Multiple " + AdditionalPersistenceUnitBuildItem.class.getSimpleName()
@@ -206,6 +206,14 @@ public final class PersistenceUnitDefinitionSupport {
             PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig = additionalConfigs.get(puName);
             BackendResolution backend = resolveBackend(config, puName, additionalConfig, dataSourceLookup, clientLookup);
             if (backend.dataSourceName().isPresent() && backend.clientName().isPresent()) {
+                if (backend.explicit()) {
+                    throw new ConfigurationException(String.format(Locale.ROOT,
+                            "Persistence unit '%s' has both '%s' and '%s' set."
+                                    + " A persistence unit must use either a datasource or an external client, not both.",
+                            puName,
+                            HibernateOrmRuntimeConfig.puPropertyKey(puName, "datasource"),
+                            HibernateOrmRuntimeConfig.puPropertyKey(puName, "client")));
+                }
                 throw new ConfigurationException(String.format(Locale.ROOT,
                         "Ambiguous configuration for the default persistence unit:"
                                 + " both a default datasource and a default external client are available."
@@ -222,7 +230,7 @@ public final class PersistenceUnitDefinitionSupport {
         }
     }
 
-    record BackendResolution(Optional<String> dataSourceName, Optional<String> clientName) {
+    record BackendResolution(Optional<String> dataSourceName, Optional<String> clientName, boolean explicit) {
     }
 
     /**
@@ -233,7 +241,7 @@ public final class PersistenceUnitDefinitionSupport {
      * <p>
      * Resolution order:
      * <ol>
-     * <li>Additional config (from {@link AdditionalPersistenceUnitBuildItem}): datasource only, no client</li>
+     * <li>Additional config (from {@link AdditionalPersistenceUnitBuildItem}): datasource or client, as specified</li>
      * <li>Explicit {@code client} config property: client, no datasource</li>
      * <li>For the default PU with no explicit datasource: returns both if both are available
      * (ambiguous), client only if only the client is available</li>
@@ -244,14 +252,20 @@ public final class PersistenceUnitDefinitionSupport {
             PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig,
             ComponentLookup dataSourceLookup, ComponentLookup clientLookup) {
         if (additionalConfig != null) {
+            if (additionalConfig.clientName().isPresent()) {
+                return new BackendResolution(Optional.empty(), additionalConfig.clientName(), true);
+            }
             Optional<String> dataSourceName = additionalConfig.dataSourceName()
                     .or(() -> HibernateProcessorUtil.getDataSourceName(config, puName));
-            return new BackendResolution(dataSourceName, Optional.empty());
+            return new BackendResolution(dataSourceName, Optional.empty(), true);
         }
 
         HibernateOrmConfigPersistenceUnit puConfig = config.persistenceUnits().get(puName);
+        if (puConfig != null && puConfig.datasource().isPresent() && puConfig.client().isPresent()) {
+            return new BackendResolution(puConfig.datasource(), puConfig.client(), true);
+        }
         if (puConfig != null && puConfig.client().isPresent()) {
-            return new BackendResolution(Optional.empty(), puConfig.client());
+            return new BackendResolution(Optional.empty(), puConfig.client(), true);
         }
 
         if (PersistenceUnitUtil.isDefaultPersistenceUnit(puName)
@@ -263,14 +277,15 @@ public final class PersistenceUnitDefinitionSupport {
             if (dataSourceAvailable && clientAvailable) {
                 return new BackendResolution(
                         Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME),
-                        Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME));
+                        Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME),
+                        false);
             }
             if (clientAvailable) {
-                return new BackendResolution(Optional.empty(), Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME));
+                return new BackendResolution(Optional.empty(), Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME), true);
             }
         }
 
-        return new BackendResolution(HibernateProcessorUtil.getDataSourceName(config, puName), Optional.empty());
+        return new BackendResolution(HibernateProcessorUtil.getDataSourceName(config, puName), Optional.empty(), true);
     }
 
     private static boolean isExplicitlyDisabled(ProgrammingParadigm paradigm, String puName, HibernateOrmConfig config) {
