@@ -246,8 +246,9 @@ public final class PersistenceUnitDefinitionSupport {
      * Resolution order:
      * <ol>
      * <li>Explicit {@code client} config property</li>
-     * <li>For the default PU with no explicit datasource: fall back to the default client
-     * if the implicit default datasource is unavailable</li>
+     * <li>For the default PU with no explicit datasource: use the default client
+     * if there is no default datasource. Fails if both a default datasource and a default client
+     * are available, requiring the user to be explicit.</li>
      * </ol>
      *
      * @return the client name, or {@code null} if no client should be used
@@ -266,14 +267,19 @@ public final class PersistenceUnitDefinitionSupport {
         if (puConfig != null && puConfig.datasource().isPresent()) {
             return null;
         }
-        // Check if the implicit default datasource is available
-        if (dataSourceLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
-                ProgrammingParadigm.BLOCKING).isEmpty()) {
-            return null;
+        boolean dataSourceAvailable = dataSourceLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                ProgrammingParadigm.BLOCKING).isEmpty();
+        boolean clientAvailable = clientLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                ProgrammingParadigm.BLOCKING).isEmpty();
+        if (dataSourceAvailable && clientAvailable) {
+            throw new ConfigurationException(String.format(Locale.ROOT,
+                    "Ambiguous configuration for the default persistence unit:"
+                            + " both a default datasource and a default external client are available."
+                            + " Set '%s' or '%s' explicitly.",
+                    HibernateOrmRuntimeConfig.puPropertyKey(puName, "datasource"),
+                    HibernateOrmRuntimeConfig.puPropertyKey(puName, "client")));
         }
-        // Default datasource unavailable — use the default client if available
-        if (clientLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
-                ProgrammingParadigm.BLOCKING).isEmpty()) {
+        if (clientAvailable) {
             return DataSourceUtil.DEFAULT_DATASOURCE_NAME;
         }
         return null;

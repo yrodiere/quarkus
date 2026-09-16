@@ -43,7 +43,7 @@ public class ClientDefaultImplicitTest {
                     .addClass(ContributedEntity.class)
                     .addClass(FakeClientRuntimeInitListener.class))
             .withConfiguration("""
-                    quarkus.datasource.jdbc.enabled=false
+                    quarkus.datasource.jdbc=false
                     """)
             .addBuildChainCustomizer(buildCustomizer());
 
