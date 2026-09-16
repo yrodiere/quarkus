@@ -78,7 +78,6 @@ public final class PersistenceUnitDefinitionBuildItem extends MultiBuildItem {
     public record AdditionalConfig(
             Optional<String> dataSourceName,
             Optional<String> explicitDialect,
-            Map<String, String> properties,
-            boolean selfManagedConnection) {
+            Map<String, String> properties) {
     }
 }

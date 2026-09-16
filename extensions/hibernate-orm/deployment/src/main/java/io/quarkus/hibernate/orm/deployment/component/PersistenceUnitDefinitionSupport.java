@@ -168,8 +168,7 @@ public final class PersistenceUnitDefinitionSupport {
             var previous = additionalConfigs.put(puName,
                     new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
                             item.getDataSourceName(),
-                            item.getExplicitDialect(), item.getProperties(),
-                            false));
+                            item.getExplicitDialect(), item.getProperties()));
             if (previous != null) {
                 throw new IllegalStateException("Multiple " + AdditionalPersistenceUnitBuildItem.class.getSimpleName()
                         + " for persistence unit '" + puName + "'");
@@ -220,9 +219,7 @@ public final class PersistenceUnitDefinitionSupport {
 
             PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig = additionalConfigs.get(puName);
             Optional<String> dataSourceName;
-            if (additionalConfig != null && additionalConfig.selfManagedConnection()) {
-                dataSourceName = Optional.empty();
-            } else if (resolvedClientNames.containsKey(puName)) {
+            if (resolvedClientNames.containsKey(puName)) {
                 dataSourceName = Optional.empty();
             } else if (additionalConfig != null) {
                 dataSourceName = additionalConfig.dataSourceName()
