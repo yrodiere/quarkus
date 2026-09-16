@@ -12,7 +12,7 @@ import io.quarkus.hibernate.orm.deployment.HibernateOrmConfig;
 import io.quarkus.hibernate.orm.deployment.JpaModelPerPersistenceUnitBuildItem;
 import io.quarkus.hibernate.orm.deployment.component.PersistenceUnitDefinitionBuildItem;
 import io.quarkus.hibernate.orm.deployment.component.PersistenceUnitDefinitionSupport;
-import io.quarkus.hibernate.orm.deployment.spi.HibernateOrmClientLookupBuildItem;
+import io.quarkus.hibernate.orm.deployment.spi.client.HibernateOrmClientLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitRequestBuildItem;
 import io.quarkus.hibernate.reactive.deployment.HibernateReactiveEnabled;

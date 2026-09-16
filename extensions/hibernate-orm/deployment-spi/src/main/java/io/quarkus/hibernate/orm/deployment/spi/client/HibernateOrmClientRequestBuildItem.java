@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.deployment.spi;
+package io.quarkus.hibernate.orm.deployment.spi.client;
 
 import io.quarkus.builder.item.MultiBuildItem;
 import io.quarkus.runtime.util.ProgrammingParadigm;
