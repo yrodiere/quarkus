@@ -1129,28 +1129,8 @@ public final class HibernateOrmProcessor {
 
         // For client-backed PUs, resolve the client and synthesize an AdditionalConfig
         if (puDefinition.getClientName().isPresent() && additionalPuConfig.isEmpty()) {
-            String clientName = puDefinition.getClientName().get();
-            List<HibernateOrmClientDefinedBuildItem> clients = clientsByName.get(clientName);
-            if (clients == null || clients.isEmpty()) {
-                throw new ConfigurationException(String.format(Locale.ROOT,
-                        "Persistence unit '%s' is configured with '%s',"
-                                + " but no client extension can handle client '%s'."
-                                + " Add an extension that provides this client"
-                                + " (e.g. quarkus-mongodb-hibernate).",
-                        persistenceUnitName,
-                        HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitName, "client"),
-                        clientName));
-            }
-            if (clients.size() > 1) {
-                throw new ConfigurationException(String.format(Locale.ROOT,
-                        "Persistence unit '%s' is configured with '%s',"
-                                + " but multiple client extensions can handle client '%s'."
-                                + " Make sure only one extension provides this client.",
-                        persistenceUnitName,
-                        HibernateOrmRuntimeConfig.puPropertyKey(persistenceUnitName, "client"),
-                        clientName));
-            }
-            HibernateOrmClientDefinedBuildItem client = clients.get(0);
+            HibernateOrmClientDefinedBuildItem client = HibernateProcessorUtil.findClientWithName(
+                    persistenceUnitName, puDefinition.getClientName().get(), clientsByName);
             additionalPuConfig = Optional.of(new PersistenceUnitDefinitionBuildItem.AdditionalConfig(
                     Optional.empty(),
                     Optional.of(client.getDialectClass()),
