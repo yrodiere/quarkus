@@ -13,7 +13,7 @@ import io.quarkus.runtime.util.Reason;
  * <p>
  * Acknowledged requests will yield a {@link HibernateOrmClientDefinedBuildItem} later on.
  *
- * @see HibernateOrmClientLookupBuildItem
+ * @see HibernateOrmClientHandlerBuildItem
  * @see HibernateOrmClientDefinedBuildItem
  */
 public final class HibernateOrmClientRequestBuildItem extends MultiBuildItem {

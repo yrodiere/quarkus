@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.spi;
+package io.quarkus.hibernate.orm.spi.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,32 +19,32 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import io.quarkus.builder.BuildChainBuilder;
 import io.quarkus.builder.BuildContext;
 import io.quarkus.builder.BuildStep;
+import io.quarkus.datasource.common.runtime.DataSourceUtil;
 import io.quarkus.datasource.deployment.spi.component.DataSourceRequestBuildItem;
 import io.quarkus.hibernate.orm.deployment.integration.HibernateOrmIntegrationRuntimeConfiguredBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.client.HibernateOrmClientDefinedBuildItem;
-import io.quarkus.hibernate.orm.deployment.spi.client.HibernateOrmClientLookupHandlerBuildItem;
+import io.quarkus.hibernate.orm.deployment.spi.client.HibernateOrmClientHandlerBuildItem;
 import io.quarkus.hibernate.orm.runtime.PersistenceUnitUtil;
 import io.quarkus.runtime.util.ProgrammingParadigm;
 import io.quarkus.runtime.util.Reason;
 import io.quarkus.test.QuarkusExtensionTest;
 
 /**
- * Tests that a persistence unit configured with an explicit client name
- * ({@code quarkus.hibernate-orm.client=myfakeclient}) uses the matching client.
+ * Tests that the default persistence unit falls back to a fake default client
+ * when no default datasource is configured.
  * <p>
- * The fake client redirects to a named datasource ("ds1") at runtime.
+ * The fake client redirects to a named datasource ("ds1") at runtime,
+ * proving that the client SPI wires everything correctly.
  */
-public class ClientNamedExplicitTest {
-
-    private static final String CLIENT_NAME = "myfakeclient";
+public class ClientDefaultImplicitTest {
 
     @RegisterExtension
     static QuarkusExtensionTest runner = new QuarkusExtensionTest()
             .withApplicationRoot((jar) -> jar
-                    .addClass(ContributedEntity.class)
+                    .addClass(ClientEntity.class)
                     .addClass(FakeClientRuntimeInitListener.class))
             .withConfiguration("""
-                    quarkus.hibernate-orm.client=myfakeclient
+                    quarkus.datasource.jdbc=false
                     """)
             .addBuildChainCustomizer(buildCustomizer());
 
@@ -55,18 +55,18 @@ public class ClientNamedExplicitTest {
                 builder.addBuildStep(new BuildStep() {
                     @Override
                     public void execute(BuildContext context) {
-                        context.produce(new HibernateOrmClientLookupHandlerBuildItem((name, paradigm) -> {
+                        context.produce(new HibernateOrmClientHandlerBuildItem((name, paradigm) -> {
                             if (paradigm == ProgrammingParadigm.REACTIVE) {
                                 return List.of(new Reason("Fake client does not support Hibernate Reactive"));
                             }
-                            if (!CLIENT_NAME.equals(name)) {
+                            if (!DataSourceUtil.DEFAULT_DATASOURCE_NAME.equals(name)) {
                                 return List.of(new Reason(String.format(java.util.Locale.ROOT,
                                         "Fake client does not handle client '%s'", name)));
                             }
                             return List.of();
                         }));
                         context.produce(new HibernateOrmClientDefinedBuildItem(
-                                CLIENT_NAME,
+                                DataSourceUtil.DEFAULT_DATASOURCE_NAME,
                                 Set.of(ProgrammingParadigm.BLOCKING),
                                 H2Dialect.class.getName(),
                                 Map.of(),
@@ -82,7 +82,7 @@ public class ClientNamedExplicitTest {
                                         .setInitListener(listener));
                     }
                 })
-                        .produces(HibernateOrmClientLookupHandlerBuildItem.class)
+                        .produces(HibernateOrmClientHandlerBuildItem.class)
                         .produces(HibernateOrmClientDefinedBuildItem.class)
                         .produces(DataSourceRequestBuildItem.class)
                         .produces(HibernateOrmIntegrationRuntimeConfiguredBuildItem.class)
@@ -96,15 +96,15 @@ public class ClientNamedExplicitTest {
 
     @Test
     @Transactional
-    public void persistenceUnitUsesNamedClient() {
-        ContributedEntity entity = new ContributedEntity("world");
+    public void defaultPersistenceUnitUsesClient() {
+        ClientEntity entity = new ClientEntity("hello");
         session.persist(entity);
         session.flush();
         session.clear();
 
-        ContributedEntity loaded = session.get(ContributedEntity.class, entity.getId());
+        ClientEntity loaded = session.get(ClientEntity.class, entity.getId());
         assertThat(loaded).isNotNull();
-        assertThat(loaded.getName()).isEqualTo("world");
+        assertThat(loaded.getName()).isEqualTo("hello");
     }
 
     @Test

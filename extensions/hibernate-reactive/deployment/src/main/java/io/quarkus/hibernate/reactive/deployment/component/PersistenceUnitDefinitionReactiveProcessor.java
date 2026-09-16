@@ -3,16 +3,15 @@ package io.quarkus.hibernate.reactive.deployment.component;
 import java.util.List;
 
 import io.quarkus.datasource.deployment.spi.component.DataSourceLookupBuildItem;
-import io.quarkus.datasource.deployment.spi.component.DataSourceRequestBuildItem;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.BuildSteps;
 import io.quarkus.hibernate.orm.deployment.HibernateOrmConfig;
 import io.quarkus.hibernate.orm.deployment.JpaModelPerPersistenceUnitBuildItem;
+import io.quarkus.hibernate.orm.deployment.component.HibernateOrmClientLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.component.PersistenceUnitDefinitionBuildItem;
 import io.quarkus.hibernate.orm.deployment.component.PersistenceUnitDefinitionSupport;
-import io.quarkus.hibernate.orm.deployment.spi.client.HibernateOrmClientLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitLookupBuildItem;
 import io.quarkus.hibernate.orm.deployment.spi.component.PersistenceUnitRequestBuildItem;
 import io.quarkus.hibernate.reactive.deployment.HibernateReactiveEnabled;
@@ -63,23 +62,6 @@ class PersistenceUnitDefinitionReactiveProcessor {
         PersistenceUnitDefinitionSupport.definePersistenceUnits(ProgrammingParadigm.REACTIVE, hibernateOrmConfig,
                 lookupBuildItem, dataSourceLookupBuildItem.getLookup(), clientLookupBuildItem.getLookup(),
                 puRequests, List.of(), List.of(), persistenceUnitDefinitions);
-    }
-
-    @BuildStep
-    public void collectDatasourceReferencesFromPersistenceUnits(
-            List<PersistenceUnitDefinitionBuildItem> puDefinitions,
-            BuildProducer<DataSourceRequestBuildItem> datasourceReferences) {
-        for (PersistenceUnitDefinitionBuildItem puDefinition : puDefinitions) {
-            if (!ProgrammingParadigm.REACTIVE.equals(puDefinition.getParadigm())
-                    || puDefinition.getDataSourceName().isEmpty()) {
-                continue;
-            }
-            Reason reason = new Reason(
-                    "Hibernate Reactive persistence unit '" + puDefinition.getPersistenceUnitName() + "'",
-                    puDefinition.getReasons());
-            datasourceReferences.produce(new DataSourceRequestBuildItem(puDefinition.getDataSourceName().get(),
-                    ProgrammingParadigm.REACTIVE, reason));
-        }
     }
 
 }

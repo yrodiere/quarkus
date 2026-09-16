@@ -175,20 +175,6 @@ public final class PersistenceUnitDefinitionSupport {
             }
         }
 
-        // For PUs that should use a client (explicitly configured or implicitly resolved),
-        // resolve the client name. Client existence is checked later, similar to datasources.
-        Map<String, String> resolvedClientNames = new HashMap<>();
-        for (var entry : puNamesWithReasons.entrySet()) {
-            String puName = entry.getKey();
-            if (additionalConfigs.containsKey(puName)) {
-                continue;
-            }
-            String clientName = getEffectiveClientName(config, puName, dataSourceLookup, clientLookup);
-            if (clientName != null) {
-                resolvedClientNames.put(puName, clientName);
-            }
-        }
-
         if (LOG.isDebugEnabled()) {
             LOG.debugf("Defining %s persistence units; reasons:\n%s", paradigm,
                     puNamesWithReasons.entrySet().stream()
@@ -218,68 +204,73 @@ public final class PersistenceUnitDefinitionSupport {
             }
 
             PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig = additionalConfigs.get(puName);
-            Optional<String> dataSourceName;
-            if (resolvedClientNames.containsKey(puName)) {
-                dataSourceName = Optional.empty();
-            } else if (additionalConfig != null) {
-                dataSourceName = additionalConfig.dataSourceName()
-                        .or(() -> HibernateProcessorUtil.getDataSourceName(config, puName));
-            } else {
-                dataSourceName = HibernateProcessorUtil.getDataSourceName(config, puName);
+            BackendResolution backend = resolveBackend(config, puName, additionalConfig, dataSourceLookup, clientLookup);
+            if (backend.dataSourceName().isPresent() && backend.clientName().isPresent()) {
+                throw new ConfigurationException(String.format(Locale.ROOT,
+                        "Ambiguous configuration for the default persistence unit:"
+                                + " both a default datasource and a default external client are available."
+                                + " Set '%s' or '%s' explicitly.",
+                        HibernateOrmRuntimeConfig.puPropertyKey(puName, "datasource"),
+                        HibernateOrmRuntimeConfig.puPropertyKey(puName, "client")));
             }
             persistenceUnitDefinitions.produce(new PersistenceUnitDefinitionBuildItem(puName, paradigm,
                     entry.getValue(),
                     config.persistenceUnits().get(puName),
-                    dataSourceName,
-                    Optional.ofNullable(resolvedClientNames.get(puName)),
-                    Optional.ofNullable(additionalConfigs.get(puName))));
+                    backend.dataSourceName(),
+                    backend.clientName(),
+                    Optional.ofNullable(additionalConfig)));
         }
     }
 
+    record BackendResolution(Optional<String> dataSourceName, Optional<String> clientName) {
+    }
+
     /**
-     * Determines the effective client name for a persistence unit, mirroring how
-     * {@link HibernateProcessorUtil#getDataSourceName} resolves the datasource name.
+     * Resolves both the effective datasource name and client name for a persistence unit.
+     * <p>
+     * Normally only one of the two is present (a PU uses either a datasource or a client).
+     * When both are present, the caller should treat that as an ambiguity error.
      * <p>
      * Resolution order:
      * <ol>
-     * <li>Explicit {@code client} config property</li>
-     * <li>For the default PU with no explicit datasource: use the default client
-     * if there is no default datasource. Fails if both a default datasource and a default client
-     * are available, requiring the user to be explicit.</li>
+     * <li>Additional config (from {@link AdditionalPersistenceUnitBuildItem}): datasource only, no client</li>
+     * <li>Explicit {@code client} config property: client, no datasource</li>
+     * <li>For the default PU with no explicit datasource: returns both if both are available
+     * (ambiguous), client only if only the client is available</li>
+     * <li>Otherwise: datasource from config</li>
      * </ol>
-     *
-     * @return the client name, or {@code null} if no client should be used
      */
-    static String getEffectiveClientName(HibernateOrmConfig config, String puName, ComponentLookup dataSourceLookup,
-            ComponentLookup clientLookup) {
+    static BackendResolution resolveBackend(HibernateOrmConfig config, String puName,
+            PersistenceUnitDefinitionBuildItem.AdditionalConfig additionalConfig,
+            ComponentLookup dataSourceLookup, ComponentLookup clientLookup) {
+        if (additionalConfig != null) {
+            Optional<String> dataSourceName = additionalConfig.dataSourceName()
+                    .or(() -> HibernateProcessorUtil.getDataSourceName(config, puName));
+            return new BackendResolution(dataSourceName, Optional.empty());
+        }
+
         HibernateOrmConfigPersistenceUnit puConfig = config.persistenceUnits().get(puName);
-        // Explicit client
         if (puConfig != null && puConfig.client().isPresent()) {
-            return puConfig.client().get();
+            return new BackendResolution(Optional.empty(), puConfig.client());
         }
-        // Implicit default: only for the default PU with no explicit datasource
-        if (!PersistenceUnitUtil.isDefaultPersistenceUnit(puName)) {
-            return null;
+
+        if (PersistenceUnitUtil.isDefaultPersistenceUnit(puName)
+                && (puConfig == null || puConfig.datasource().isEmpty())) {
+            boolean dataSourceAvailable = dataSourceLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                    ProgrammingParadigm.BLOCKING).isEmpty();
+            boolean clientAvailable = clientLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                    ProgrammingParadigm.BLOCKING).isEmpty();
+            if (dataSourceAvailable && clientAvailable) {
+                return new BackendResolution(
+                        Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME),
+                        Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME));
+            }
+            if (clientAvailable) {
+                return new BackendResolution(Optional.empty(), Optional.of(DataSourceUtil.DEFAULT_DATASOURCE_NAME));
+            }
         }
-        if (puConfig != null && puConfig.datasource().isPresent()) {
-            return null;
-        }
-        boolean dataSourceAvailable = dataSourceLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
-                ProgrammingParadigm.BLOCKING).isEmpty();
-        boolean clientAvailable = clientLookup.unavailableReasons(DataSourceUtil.DEFAULT_DATASOURCE_NAME,
-                ProgrammingParadigm.BLOCKING).isEmpty();
-        if (dataSourceAvailable && clientAvailable) {
-            throw new ConfigurationException(String.format(Locale.ROOT,
-                    "Ambiguous configuration for the default persistence unit:"
-                            + " both a default datasource and a default external client are available."
-                            + " Set '%s' or '%s' explicitly.",
-                    HibernateOrmRuntimeConfig.puPropertyKey(puName, "datasource"),
-                    HibernateOrmRuntimeConfig.puPropertyKey(puName, "client")));
-        }
-        if (clientAvailable) {
-            return DataSourceUtil.DEFAULT_DATASOURCE_NAME;
-        }
-        return null;
+
+        return new BackendResolution(HibernateProcessorUtil.getDataSourceName(config, puName), Optional.empty());
     }
 
     private static boolean isExplicitlyDisabled(ProgrammingParadigm paradigm, String puName, HibernateOrmConfig config) {

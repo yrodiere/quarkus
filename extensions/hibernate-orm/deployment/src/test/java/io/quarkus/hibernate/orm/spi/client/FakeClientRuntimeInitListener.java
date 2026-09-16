@@ -1,4 +1,4 @@
-package io.quarkus.hibernate.orm.spi;
+package io.quarkus.hibernate.orm.spi.client;
 
 import java.util.function.BiConsumer;
 

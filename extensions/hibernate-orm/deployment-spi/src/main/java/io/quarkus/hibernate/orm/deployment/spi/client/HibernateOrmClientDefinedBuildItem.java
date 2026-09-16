@@ -15,7 +15,7 @@ import io.quarkus.runtime.util.ProgrammingParadigm;
  * client they make available. Carries the dialect class and properties
  * needed to configure a persistence unit for the client.
  *
- * @see HibernateOrmClientLookupBuildItem
+ * @see HibernateOrmClientHandlerBuildItem
  * @see HibernateOrmClientRequestBuildItem
  */
 public final class HibernateOrmClientDefinedBuildItem extends MultiBuildItem {

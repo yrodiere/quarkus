@@ -11,15 +11,13 @@ import io.quarkus.deployment.component.ComponentLookup;
  * if <em>any</em> handler reports it as available.
  * <p>
  * Should not be consumed except by the Hibernate ORM extension;
- * other extensions should consume {@link HibernateOrmClientLookupBuildItem}.
- *
- * @see HibernateOrmClientLookupBuildItem
+ * the ORM extension aggregates these into an internal lookup build item.
  */
-public final class HibernateOrmClientLookupHandlerBuildItem extends MultiBuildItem {
+public final class HibernateOrmClientHandlerBuildItem extends MultiBuildItem {
 
     private final ComponentLookup lookup;
 
-    public HibernateOrmClientLookupHandlerBuildItem(ComponentLookup lookup) {
+    public HibernateOrmClientHandlerBuildItem(ComponentLookup lookup) {
         this.lookup = lookup;
     }
 
