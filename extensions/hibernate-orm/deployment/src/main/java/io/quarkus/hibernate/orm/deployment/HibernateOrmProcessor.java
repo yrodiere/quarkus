@@ -1088,7 +1088,9 @@ public final class HibernateOrmProcessor {
             List<DatabaseKindDialectBuildItem> dbKindMetadataBuildItems) {
         Map<String, List<HibernateOrmClientDefinedBuildItem>> clientsByName = new LinkedHashMap<>();
         for (HibernateOrmClientDefinedBuildItem client : definedClients) {
-            clientsByName.computeIfAbsent(client.getName(), k -> new ArrayList<>()).add(client);
+            if (client.getSupportedParadigms().contains(ProgrammingParadigm.BLOCKING)) {
+                clientsByName.computeIfAbsent(client.getName(), k -> new ArrayList<>()).add(client);
+            }
         }
         for (PersistenceUnitDefinitionBuildItem puDefinition : persistenceUnitDefinitions) {
             if (puDefinition.getParadigm() != ProgrammingParadigm.BLOCKING) {

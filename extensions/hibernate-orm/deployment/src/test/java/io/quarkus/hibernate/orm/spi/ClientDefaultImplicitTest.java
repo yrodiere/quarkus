@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import jakarta.inject.Inject;
@@ -66,6 +67,7 @@ public class ClientDefaultImplicitTest {
                         }));
                         context.produce(new HibernateOrmClientDefinedBuildItem(
                                 DataSourceUtil.DEFAULT_DATASOURCE_NAME,
+                                Set.of(ProgrammingParadigm.BLOCKING),
                                 H2Dialect.class.getName(),
                                 Map.of(),
                                 true));
